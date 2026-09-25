@@ -1,0 +1,24 @@
+{
+  "provided_by": "user",
+  "received_date": "2026-09-25",
+  "archives": {
+    "train.zip": {
+      "bytes": 1155875314,
+      "sha256": "8d4f34210405b89bf9f6bc1bb6de4303eefa4fb45460624358e5c5c5a118e423"
+    },
+    "test.zip": {
+      "bytes": 79222277,
+      "sha256": "e0696e7ffc7fe96e9b309600b401e2c09a5b06802bb928024f732261bdfa4652"
+    }
+  },
+  "notebook_evidence": {
+    "train_paths_recorded": 2500,
+    "test_paths_recorded": 624,
+    "all_recorded_paths_found_in_archives": true,
+    "historical_image_byte_identity_verified": false
+  },
+  "upstream_dataset_identity": "candidate only, not verified against upstream image hashes",
+  "candidate_source": "https://data.mendeley.com/datasets/rscbjbr9sj/2",
+  "candidate_source_license": "CC BY 4.0 on source page; applicability to supplied archive not established",
+  "source_page_checked": "2026-09-25"
+}
