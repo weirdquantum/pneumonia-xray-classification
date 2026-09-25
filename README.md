@@ -97,3 +97,7 @@ git switch -c codex/reproduce-cnn  # 后续复现时创建分支，不必现在�
 修改文件后，使用 `git add <具体文件>` 选择本次内容，再用 `git commit -m "说明这次变化"` 保存本地快照。`git push` 才会把提交上传到 GitHub。基线文件保留在 `notebooks/baselines/`；改进实现放入新的目录，通过分支和 PR 记录变化。
 
 本阶段仅归档导师指导下完成的原始实验；后续新增的个人改进及其验证结果会单独记录。
+
+## CNN subproject
+
+[Stage 1: data audit and CNN architecture explanation](projects/cnn/README.md). The original baseline archive is unchanged. New training and model comparisons have not started.
