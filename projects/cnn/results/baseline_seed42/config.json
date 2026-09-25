@@ -1,0 +1,31 @@
+{
+  "model": "baseline",
+  "data_root": "data",
+  "manifest": "projects/cnn/reports/data_v1/manifest.csv",
+  "output": "runs/cnn/baseline/seed42",
+  "device": "auto",
+  "epochs": 30,
+  "batch_size": 32,
+  "lr": 0.001,
+  "patience": 7,
+  "seed": 42,
+  "device_used": "mps",
+  "torch_version": "2.14.0",
+  "parameters": 197026,
+  "class_to_idx": {
+    "NORMAL": 0,
+    "PNEUMONIA": 1
+  },
+  "input_size": [
+    3,
+    100,
+    100
+  ],
+  "rescale": "1/255",
+  "threshold": 0.5,
+  "train_samples": 3790,
+  "val_samples": 947,
+  "manifest_sha256": "e751f10ba6613c9a589b4ea1eeecdf87d4d9690a41cca117dd74881603d4aa2a",
+  "split_sha256": "24f13d7d88d07433334dbd4a4c3a41489f42f95cd0635157a7c232b2a302c327",
+  "class_weights": null
+}

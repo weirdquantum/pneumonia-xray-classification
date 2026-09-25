@@ -1,4 +1,4 @@
-"""Shared training entry point; selects checkpoints on validation data only."""
+"""Final baseline training entry point; selects checkpoints on validation data only."""
 import argparse
 import csv
 import hashlib
@@ -37,16 +37,8 @@ def select_device(requested):
 
 def make_training_components(name, labels, device, lr=1e-3):
     model = build_model(name).to(device)
-    if name == 'improved':
-        counts = torch.bincount(torch.tensor(labels), minlength=2).float()
-        if (counts == 0).any():
-            raise ValueError('Both classes must be present in the training set')
-        weights = counts.sum() / (2 * counts)
-        criterion = nn.CrossEntropyLoss(weight=weights.to(device))
-        optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    else:
-        criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     return model, criterion, optimizer
 
 
@@ -96,7 +88,7 @@ def fit(args):
     summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
     if summary.get('manifest_sha256', manifest_hash) != manifest_hash:
         raise ValueError('Manifest changed since audit; regenerate/review the split before training')
-    train_data = ChestXrayDataset(args.data_root, manifest, 'train', improved=args.model == 'improved')
+    train_data = ChestXrayDataset(args.data_root, manifest, 'train')
     val_data = ChestXrayDataset(args.data_root, manifest, 'val')
     if set(train_data.labels) != {0, 1} or set(val_data.labels) != {0, 1}:
         raise ValueError('Train and validation must each contain both classes')
@@ -146,7 +138,7 @@ def fit(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--model', choices=['baseline', 'improved'], required=True)
+    parser.add_argument('--model', choices=['baseline'], default='baseline')
     parser.add_argument('--data-root', type=Path, default=REPO_ROOT / 'data')
     parser.add_argument('--manifest', type=Path, default=Path(__file__).parent / 'reports/data_v1/manifest.csv')
     parser.add_argument('--output', type=Path)

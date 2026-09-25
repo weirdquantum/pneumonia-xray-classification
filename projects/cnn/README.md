@@ -1,64 +1,75 @@
-# CNN：基础版与改进版
+# PyTorch CNN：最终模型
 
-两个模型均已用 PyTorch 实现，共用数据加载和训练入口。已用少量真实图像验证训练、权重保存加载和预测一致性；尚未进行完整训练，不报告模型性能。
+最终采用原始结构的 **BaselineCNN**，从零训练。候选改进方案不再保留为当前入口，其实现与实验过程仍可通过 Git 历史查看。此决定不代表基础模型在所有指标上都更优。
 
-## 核心文件
+## 模型结构
 
-| 文件 | 作用 |
-| --- | --- |
-| [models.py](models.py) | `BaselineCNN`、`ImprovedCNN` 两个模型 |
-| [dataset.py](dataset.py) | 从既有划分清单加载图像，统一预处理和训练增强 |
-| [train.py](train.py) | 共用训练、验证、早停和最佳权重保存 |
-
-## 两个模型有什么区别
-
-| | 基础版 | 改进版 |
-| --- | --- | --- |
-| 输入 | 100×100 RGB，像素除以 255 | 相同 |
-| 卷积通道 | 32 → 32 → 64 → 64 | 相同 |
-| 卷积块 | Conv → ReLU → MaxPool → Dropout(0.2) | Conv → BatchNorm → ReLU → MaxPool |
-| 分类头 | Flatten → Linear(128) → ReLU → Dropout(0.1) → Linear(2) | 全局平均池化 → Flatten → Dropout(0.3) → Linear(2) |
-| 可学习参数 | 197,026 | 66,082 |
-| 训练增强 | 无 | 旋转 ±7°，平移最多 5% |
-| 损失 | 普通交叉熵 | 由训练集类别数量计算权重的交叉熵 |
-| 优化器 | Adam | AdamW，weight decay=1e-4 |
-
-两者都输出 logits，训练时直接送入交叉熵；预测时才做 Softmax。标签固定为 NORMAL=0、PNEUMONIA=1，肺炎概率 ≥0.5 判为肺炎。训练改动同时使用，不做消融实验，也不预先宣称改进模型更好。
-
-## 运行
-
-在仓库根目录执行。建议 Python 3.11；当前本地 `.venv-cnn` 已安装依赖。新环境先创建虚拟环境并安装 `projects/cnn/requirements.txt`。
-
-```bash
-source .venv-cnn/bin/activate
-
-# 基础模型
-python projects/cnn/train.py --model baseline --seed 42
-
-# 改进模型
-python projects/cnn/train.py --model improved --seed 42
+```text
+100×100 RGB / 255
+→ Conv(3→32) → ReLU → MaxPool → Dropout(0.2)
+→ Conv(32→32) → ReLU → MaxPool → Dropout(0.2)
+→ Conv(32→64) → ReLU → MaxPool → Dropout(0.2)
+→ Conv(64→64) → ReLU → MaxPool → Dropout(0.2)
+→ Flatten(1024) → Linear(128) → ReLU → Dropout(0.1)
+→ Linear(2)
 ```
 
-默认 batch size=32、学习率=1e-3、最多 30 epoch，连续 7 个 epoch 验证 Balanced Accuracy 未提升则早停。自动选择 CUDA → MPS → CPU，也可以指定 `--device cpu` 或 `--device cuda`。同结构重建并非去年 Keras 结果的精确复现。
+参数量 **197,026**。训练时直接用 logits 计算交叉熵；预测时使用 Softmax。NORMAL=0，PNEUMONIA=1，阈值 0.5。优化器为 Adam，无数据增强。
 
-默认读取本地 `data/` 和现有 `reports/data_v1/manifest.csv`，只加载训练集和验证集。命令不会评估开发测试集。Colab 上按同样目录放置数据，或使用 `--data-root` 指定路径。
+## 已完成训练
 
-每次运行输出到 `runs/cnn/<model>/seed<seed>/`：
+| 项目 | 结果 |
+| --- | --- |
+| 训练 / 验证图像 | 3,790 / 947 |
+| seed | 42 |
+| batch size / 学习率 | 32 / 0.001 |
+| 完成 epoch / 最佳 epoch | 30 / 26 |
+| 最佳权重的验证准确率 | **96.30%** |
+| 最佳权重的验证 Balanced Accuracy | **96.41%** |
+| 训练设备 / 用时 | Apple MPS / 约 11 分 29 秒 |
 
-- `best.pt`：验证 Balanced Accuracy 最高的模型权重、模型名称、epoch 和配置。
-- `history.csv`：各 epoch 的训练/验证损失、准确率、Balanced Accuracy。
-- `config.json`：参数量、训练配置、类别权重、环境版本和数据清单哈希。
+**这些是用于选取权重的验证集成绩，不是独立测试成绩。**当前仅运行一个随机种子，开发评估集尚未评估。不能与原 Notebook 的 624 张历史测试结果直接比较，也不声称临床有效性。
 
-已有输出目录不会被覆盖；重跑使用新的 `--output`。后续正式实验分别使用 seed 42、43、44。显存不足时两个模型统一改为 `--batch-size 16` 并重跑，不自动改变一方的条件。
+[训练记录](results/baseline_seed42/history.csv) · [训练配置](results/baseline_seed42/config.json) · [机器可读结果与权重哈希](results/baseline_seed42/metrics.json)
 
-## 已做的验证
+## 安装和运行
 
-CPU 上使用真实训练图像 8 张、验证图像 4 张，各完成一个 epoch，仅检验流程。两个模型的输出尺寸、参数量、反向传播、最佳权重保存/加载、评估模式下重复预测以及单张/批量预测一致性均通过；增强仅用于改进版训练集。这些小样本检查不是可用于简历的实验成绩。
+在仓库根目录执行，建议 Python 3.11：
 
-## 前一阶段资料
+```bash
+python3.11 -m venv .venv-cnn
+source .venv-cnn/bin/activate
+python -m pip install -r projects/cnn/requirements.txt
+```
 
-- [原始 CNN 逐层讲解](docs/ARCHITECTURE.md)
-- [数据审计报告与划分局限](docs/DATA_AUDIT.md)
-- [固定数据清单](reports/data_v1/manifest.csv)
+### 使用已训练权重
 
-正式训练沿用既有划分，不在此阶段重新调整数据。开发评估子集为 301 张，不能直接与旧 Notebook 的 624 张历史测试结果比较。
+从仓库的 **Releases → v0.2.0-cnn** 下载 `cnn_baseline_seed42.pt` 和 `SHA256SUMS`，放入本地 `weights/`。该目录不进入 Git。下载后可用 `shasum -a 256 -c SHA256SUMS` 在权重目录核对。
+
+```bash
+python projects/cnn/predict.py --checkpoint weights/cnn_baseline_seed42.pt --image /path/to/image.jpeg
+```
+
+输出预测类别、肺炎模型概率分数与阈值。该分数没有经过概率校准，不是临床患病概率。这里只提供离线命令，不提供展示界面。
+
+### 重新训练
+
+把获得授权的原始数据放入 `data/train/{NORMAL,PNEUMONIA}`、`data/test/{NORMAL,PNEUMONIA}`，使用仓库内固定清单。数据源的具体版本与使用边界见审计报告；影像不随仓库分发。
+
+```bash
+python projects/cnn/train.py --seed 42 --output runs/cnn/baseline/reproduction
+```
+
+默认最多 30 epoch，按验证 Balanced Accuracy 保存最佳权重，连续 7 轮不提升则早停；自动选择 CUDA/MPS/CPU。原来的 `--model baseline` 参数仍可使用。不同设备不保证逐位一致。
+
+输出 `best.pt`、`history.csv` 和 `config.json`，拒绝覆盖非空输出目录。训练代码不读取开发评估集。
+
+## 代码与资料
+
+- [models.py](models.py)：最终基础 CNN。
+- [dataset.py](dataset.py)：固定清单读取、RGB 转换、100×100 缩放和除以 255。
+- [train.py](train.py)：训练、验证、早停和权重保存。
+- [predict.py](predict.py)：加载权重并预测单张图像。
+- [CNN 逐层讲解](docs/ARCHITECTURE.md) · [数据审计报告](docs/DATA_AUDIT.md)
+
+数据分组使用文件名与内容代理，不是已验证患者级划分。隔离后开发评估集为 301 张，其中肺炎 70 张，存在选择偏差风险。本次不以该集合的结果选模型。
