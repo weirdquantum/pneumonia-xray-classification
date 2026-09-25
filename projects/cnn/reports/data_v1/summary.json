@@ -1,0 +1,46 @@
+{
+  "dataset_sha256": "41db882f5c498b5dac03381e0234402c9417d009cbd2a0aa6b26cac8355b45b3",
+  "evaluation_name": "original test set development evaluation",
+  "excluded_root_entries": [
+    "audit_initial",
+    "test.zip",
+    "train.zip"
+  ],
+  "final_counts": {
+    "development_test/NORMAL": 231,
+    "development_test/PNEUMONIA": 70,
+    "train/NORMAL": 1072,
+    "train/PNEUMONIA": 2718,
+    "val/NORMAL": 268,
+    "val/PNEUMONIA": 679
+  },
+  "ignored_files": [],
+  "manifest_sha256": "e751f10ba6613c9a589b4ea1eeecdf87d4d9690a41cca117dd74881603d4aa2a",
+  "matches_notebook_total_counts": true,
+  "near_duplicate_detection": false,
+  "notebook_reference_counts": {
+    "test": 624,
+    "train": 5216
+  },
+  "observed_images": 5840,
+  "original_counts": {
+    "test/NORMAL": 234,
+    "test/PNEUMONIA": 390,
+    "train/NORMAL": 1341,
+    "train/PNEUMONIA": 3875
+  },
+  "patient_level_verified": false,
+  "pillow": "11.3.0",
+  "policy": "cnn-filename-rgb-content-v1",
+  "python": "3.14.7",
+  "quarantine_counts": {
+    "cross_original_split_group": 777,
+    "duplicate_pixels_within_original_split": 25
+  },
+  "schema_version": 1,
+  "script_sha256": "0701b1634b346dd814abd06f4527c399b9acf09aafed57472589ac5adf9ad545",
+  "seed": 42,
+  "split_sha256": "24f13d7d88d07433334dbd4a4c3a41489f42f95cd0635157a7c232b2a302c327",
+  "unrecognized_filename_count": 0,
+  "val_fraction_requested": 0.2
+}

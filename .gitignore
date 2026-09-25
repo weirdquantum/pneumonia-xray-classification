@@ -32,3 +32,6 @@ checkpoints/
 .cache/
 runs/
 wandb/
+
+# Per-task isolated audit/training environments
+.venv-*/

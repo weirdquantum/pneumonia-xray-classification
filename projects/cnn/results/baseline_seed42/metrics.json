@@ -1,0 +1,16 @@
+{
+  "model": "BaselineCNN",
+  "seed": 42,
+  "epochs_completed": 30,
+  "best_epoch": 26,
+  "validation_accuracy": 0.9630411826821542,
+  "validation_balanced_accuracy": 0.9640631675720215,
+  "selection_metric": "validation_balanced_accuracy",
+  "elapsed_seconds": 688.8,
+  "parameters": 197026,
+  "evaluation_scope": "validation used for checkpoint selection; no development-test evaluation",
+  "artifact_file": "cnn_baseline_seed42.pt",
+  "artifact_sha256": "a95ef8e767ec0927d52314a8286ea26751b078e8a9163e36918dd88e5464d6dc",
+  "training_code_commit": "5af2761",
+  "checkpoint_state": "unchanged; CPU storage and portable config only"
+}
