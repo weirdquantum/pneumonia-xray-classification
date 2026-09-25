@@ -100,4 +100,4 @@ git switch -c codex/reproduce-cnn  # 后续复现时创建分支，不必现在�
 
 ## CNN subproject
 
-[Stage 1: data audit and CNN architecture explanation](projects/cnn/README.md). The original baseline archive is unchanged. New training and model comparisons have not started.
+[CNN subproject: PyTorch baseline and improved model](projects/cnn/README.md). Both architectures and the shared training entry point are implemented and checked with small real-image batches. Full training and model comparison have not started. The original baseline archive is unchanged.
