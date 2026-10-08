@@ -1,0 +1,16 @@
+# Dataset (download separately, see README)
+train/
+test/
+val/
+chest_xray/
+
+# OS / editor
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+
+# Model artifacts
+*.h5
+*.keras
+*.pt
+*.pkl
