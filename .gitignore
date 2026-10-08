@@ -1,16 +1,23 @@
-# Dataset (download separately, see README)
+# Raw dataset (download separately, see README)
 train/
 test/
 val/
 chest_xray/
 
-# OS / editor
-.DS_Store
-.ipynb_checkpoints/
-__pycache__/
+# Generated cache and logs (python scripts/prepare_data.py rebuilds data/)
+data/
+logs/
 
-# Model artifacts
+# Model weights; per-run metrics, histories and predictions under runs/ are committed
+*.pt
 *.h5
 *.keras
-*.pt
 *.pkl
+
+# Environment / OS
+.venv/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store

@@ -1,57 +1,128 @@
 # 胸部 X 光肺炎二分类 (Pneumonia Chest X-Ray Classification)
 
-2025 年暑期科研项目：基于儿童胸部 X 光片，区分 **NORMAL（正常）** 与 **PNEUMONIA（肺炎）**，对比三类方法：
+基于儿童胸部 X 光片区分 **NORMAL（正常）** 与 **PNEUMONIA（肺炎）**。2025 年暑期科研项目，v2 版本用统一的 PyTorch 流程重写：按患者划分验证集、完整的医学评估指标、ImageNet 预训练模型微调（ResNet50 / DenseNet121 / EfficientNet-B0 / ViT-B/16），并用 Grad-CAM 检查模型是否在"走捷径"。
 
-1. 从零训练的卷积神经网络（CNN）
-2. ImageNet 预训练 ResNet50 作为冻结特征提取器 + 传统分类器
-3. ViT 图像预处理 + 像素特征 + 传统分类器（基线）
+**最佳结果（ResNet50 微调）：测试集准确率 93.3%，ROC-AUC 0.983，敏感度 99.2%（390 例肺炎漏诊 3 例），特异度 83.3%。** v1 最好成绩为 80.8%。
 
-## 数据集
+![ROC curves](figures/roc_curves.png)
 
-使用 Kaggle 公开数据集 [Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)（Kermany et al., *Cell* 2018）。数据未包含在本仓库中，请下载后放在项目根目录：
+## 结果
 
-```
-.
-├── train/
-│   ├── NORMAL/      # 1,341 张
-│   └── PNEUMONIA/   # 3,875 张
-└── test/
-    ├── NORMAL/      # 234 张
-    └── PNEUMONIA/   # 390 张
-```
+官方测试集 624 张（234 正常 / 390 肺炎），每个模型只在训练结束后评估一次。决策阈值在验证集上用 Youden 指数选取，括号内为按患者重采样的 bootstrap 95% 置信区间。
 
-训练集类别比例约为 1 : 2.9（正常 : 肺炎），存在明显的类别不平衡。
+数值均为百分比（AUC × 100）。
+
+| Model | Params (M) | AUC | Accuracy | Sensitivity | Specificity | F1 | Acc @0.5 | Threshold | CAM border share | Train (min) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| CNN (from scratch) | 1.2 | 97.6 (96.2–98.6) | 89.1 (86.1–91.7) | 99.5 (98.6–100.0) | 71.8 (65.4–77.7) | 91.9 (89.4–94.1) | 90.4 | 0.41 | 0.28 | 41 |
+| ResNet50 (fine-tuned) | 23.5 | 98.3 (97.4–99.0) | 93.3 (91.0–95.2) | 99.2 (98.3–100.0) | 83.3 (78.6–88.0) | 94.9 (92.8–96.4) | 86.4 | 0.96 | 0.21 | 23 |
+| DenseNet121 (fine-tuned) | 7.0 | 98.0 (96.7–99.0) | 88.3 (85.4–91.0) | 99.5 (98.7–100.0) | 69.7 (63.5–75.4) | 91.4 (88.9–93.6) | 84.3 | 0.79 | 0.30 | 25 |
+| EfficientNet-B0 (fine-tuned) | 4.0 | 98.2 (97.1–99.0) | 91.5 (89.0–93.7) | 99.0 (97.9–99.8) | 79.1 (73.9–84.1) | 93.6 (91.5–95.3) | 88.6 | 0.77 | 0.33 | 13 |
+| ViT-B/16 (fine-tuned) | 85.8 | 98.7 (97.9–99.3) | 91.0 (88.6–93.2) | 99.5 (98.6–100.0) | 76.9 (71.2–82.2) | 93.3 (91.1–95.1) | 90.9 | 0.56 | 0.31 | 56 |
+
+- **Acc @0.5**：阈值固定为 0.5 时的准确率，用于对比阈值选择的作用。
+- **CAM border share**：Grad-CAM 热力图落在图像外围 12.5% 边框内的比例。热力图均匀分布时为 0.44，越低说明越集中在胸腔。
+
+![Confusion matrices](figures/confusion_matrices.png)
+
+### 与 v1 对比
+
+| 方法 | v1 准确率 | v2 准确率 |
+|---|---|---|
+| CNN（从零训练） | 78.0% | 89.1%（修复训练流程，加 BatchNorm） |
+| ResNet50 | 80.8%（冻结特征 + 逻辑回归） | 93.3%（微调） |
+| ViT | 75.3%（只用了 ViT 预处理器 + 像素逻辑回归） | 91.0%（ViT-B/16 微调） |
+
+## 主要发现
+
+1. **相对 v1 的提升主要来自修好训练流程，而不只是换了更大的模型。** 同样从零训练的 CNN 从 78.0% 提升到 89.1%，改动只有打乱训练数据、统一预处理、数据增强、类别加权和 BatchNorm。
+2. **预训练模型的 AUC 略高，但彼此之间没有显著差异。** 四个预训练模型的测试 AUC 为 0.980–0.987，从零训练的 CNN 为 0.976，置信区间大幅重叠。预训练的主要好处是收敛更快：CNN 训练了 27 轮（41 分钟）才达到最佳，EfficientNet-B0 只用 13 分钟。各模型准确率 88–93% 的差异主要来自阈值，而不是排序能力。
+3. **验证集与测试集存在分布偏移。** 验证集 AUC 普遍达到 0.998 以上，测试集只有 0.98 左右。在验证集上选出的阈值用到测试集上仍然偏宽松：所有模型的敏感度约 99%，特异度只有 70–83%，错误几乎都是"正常片被判为肺炎"。验证集阈值让 ResNet50、DenseNet121、EfficientNet-B0 的准确率比固定 0.5 提高 3–7 个百分点，但对 CNN（90.4% → 89.1%）和 ViT 几乎没有帮助，说明阈值无法完全弥补分布偏移。这说明这个 Kaggle 测试集和训练集来源不完全一致，模型部署到新医院前需要外部验证集重新校准。
+4. **没有发现明显的捷径学习。** 所有模型的 Grad-CAM 边框占比（0.21–0.33）都明显低于均匀分布的 0.44。ViT 的热力图分布在双侧肺野，ResNet50 最集中。正常与肺炎图片的原始尺寸存在系统性差异（宽度中位数 1640 px vs 1168 px），因此缓存时统一缩放为正方形，以消除宽高比这一潜在捷径。
+5. **ViT 输出的概率过于自信**，大量预测为 0.00 或 1.00，需要温度缩放（temperature scaling）等校准方法后才能当作风险概率使用。
+
+Grad-CAM 示例（每行依次为真阳性、真阴性、假阳性、假阴性中置信度最高的病例）：
+
+| ResNet50 | ViT-B/16 |
+|---|---|
+| ![](figures/gradcam_resnet50.png) | ![](figures/gradcam_vit_b_16.png) |
+
+## 数据
+
+使用 Kaggle 公开数据集 [Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)（Kermany et al., *Cell* 2018）。数据不在仓库中，下载后把 `train/`、`test/`（以及可选的 `val/`）放在项目根目录。
+
+`scripts/prepare_data.py` 的处理：
+
+- **按患者划分验证集。** 文件名中带有患者编号（`person123_bacteria_456.jpeg`、`IM-0115-0001.jpeg`），训练集 3875 张肺炎片只来自约 1600 名患者，最多一人 30 张。用 `StratifiedGroupKFold` 从训练集中按患者分出 15% 作为验证集，保证同一患者不会同时出现在训练集和验证集，同时保持类别比例。官方 `val/` 只有 16 张，并入训练池。
+- **统一读图。** 训练集中有 283 张 JPEG 是 RGB 三通道（v1 的 ViT notebook 正是因此静默丢掉了这些图），这里全部转为灰度后再缩放为 256×256，缓存为 `data/images.npy`。
+- **数据检查**（`data/data_report.json`）：训练/验证无患者重叠；数据中有 32 张完全重复的图片，全部在同一划分内部，没有跨划分重复。
+
+| 划分 | 正常 | 肺炎 | 患者数 |
+|---|---|---|---|
+| train | 1149 | 3321 | 2440 |
+| val | 192 | 554 | 406 |
+| test | 234 | 390 | 427 |
 
 ## 方法
 
-| Notebook | 方法 | 输入 | 分类器 |
-|---|---|---|---|
-| [`cnn.ipynb`](cnn.ipynb) | 4 层 Conv + MaxPool + Dropout，从零训练 5 个 epoch | 100×100 RGB，归一化到 [0,1] | Dense(128) → Softmax(2) |
-| [`resnet.ipynb`](resnet.ipynb) | ResNet50 (ImageNet 权重，`include_top=False`，冻结) 提取 4×4×2048 特征并展平 | 100×100，`resnet50.preprocess_input` | Logistic Regression / Random Forest |
-| [`VIT.ipynb`](VIT.ipynb) | `ViTFeatureExtractor` (google/vit-base-patch16-224) 将图片缩放并标准化为 224×224×3，展平后作为特征 | 150,528 维像素向量 | Logistic Regression / Random Forest |
+- **输入**：灰度图复制为 3 通道，224×224，ImageNet 均值方差标准化。
+- **数据增强**（仅训练）：随机裁剪缩放（面积 70–100%）、±10° 旋转、±5% 平移、亮度/对比度扰动。不使用水平翻转，因为心脏位于左侧，翻转会产生解剖上不合理的图像。
+- **类别不平衡**：`BCEWithLogitsLoss` 的 `pos_weight = 正常数 / 肺炎数`；可选 Focal Loss（`--loss focal`）。
+- **两阶段微调**：先冻结主干网络训练 2 轮新分类头（lr 1e-3），再全部解冻，用 AdamW + OneCycle 余弦学习率微调；梯度裁剪 1.0。
+- **模型选择**：按验证集 AUC 保存最佳 checkpoint，带早停。测试集只在最后评估一次。
+- **评估**：准确率、敏感度、特异度、精确率、F1、ROC-AUC、混淆矩阵；按患者 bootstrap 1000 次估计置信区间。
 
-## 结果（测试集 624 张，Accuracy）
-
-| 方法 | Accuracy |
-|---|---|
-| CNN（从零训练） | 78.0% |
-| **ResNet50 特征 + Logistic Regression** | **80.8%** |
-| ResNet50 特征 + Random Forest | 78.7% |
-| ViT 预处理像素 + Logistic Regression | 75.3% |
-| ViT 预处理像素 + Random Forest | 76.0% |
-
-结论：在小数据集上，ImageNet 预训练特征的迁移效果优于从零训练的小型 CNN 和原始像素特征。
-
-## 运行
-
-Notebook 最初在 Google Colab 上运行，数据路径为 `/content/drive/MyDrive/train` 与 `/content/drive/MyDrive/test`。本地运行时请修改各 notebook 开头的 `train_dir` / `test_dir`。
+## 复现
 
 ```bash
-pip install -r requirements.txt
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-## 已知局限与后续工作
+```bash
+bash scripts/run_all.sh
+```
 
-- 仅报告了 Accuracy；在类别不平衡的医学场景中，还应报告敏感度（召回率）、特异度、F1 和 ROC-AUC。
-- 未划分验证集，未使用数据增强和类别权重。
-- `VIT.ipynb` 只使用了 ViT 的预处理器，并未使用 ViT 模型本身提取特征；下一步应接入 `ViTModel` 的 [CLS] 嵌入或直接微调。
+`run_all.sh` 依次执行数据缓存、训练全部 5 个模型、生成 Grad-CAM 和汇总结果表。单独训练一个模型：
+
+```bash
+python -m pneumonia.train --model resnet50
+```
+
+```bash
+python -m pneumonia.gradcam --run runs/resnet50
+```
+
+自动选择 CUDA / Apple MPS / CPU。在 Apple M5（16 GB）上全部训练约 2.5 小时。运行单元测试：
+
+```bash
+pytest
+```
+
+## 项目结构
+
+```
+src/pneumonia/
+  data.py       文件名解析、按患者划分、图像缓存、Dataset 与数据增强
+  models.py     模型注册表（simple_cnn / resnet50 / densenet121 / efficientnet_b0 / vit_b_16）
+  train.py      两阶段训练、早停、验证集选阈值、测试集评估
+  metrics.py    评估指标、Youden 阈值、按患者 bootstrap 置信区间
+  gradcam.py    Grad-CAM（含 ViT token 重排）与边框占比检查
+scripts/        prepare_data.py、run_all.sh、report.py
+runs/<model>/   metrics.json、history.csv、test_predictions.csv、gradcam.json（权重文件未提交）
+results/        汇总结果表
+figures/        ROC 曲线、混淆矩阵、Grad-CAM 示例
+tests/          单元测试
+legacy/         v1 的三个 Colab notebook（TensorFlow / sklearn）
+```
+
+## 局限与后续工作
+
+- **只有一个测试集，且与训练集存在分布偏移。** 需要在外部数据（如 RSNA Pneumonia、CheXpert）上验证并重新校准阈值。
+- **患者编号可能有歧义。** 同一个 `personN` 编号会同时出现在 bacteria 和 virus 两类文件名中，训练集和测试集之间有 170 个编号重复（不同亚型，没有完全相同的图片）。验证集划分时把同编号视为同一患者，是保守做法；官方测试集按原样使用。
+- **每个模型只用一个随机种子训练。** 多种子重复实验可以给出更可靠的模型间比较。
+- **可以尝试的方向**：医学影像预训练权重（如 TorchXRayVision 的 CheXpert / MIMIC 模型）、概率校准（温度缩放）、细菌性/病毒性肺炎三分类、模型集成。
+
+## 引用
+
+Kermany, D. S., et al. Identifying Medical Diagnoses and Treatable Diseases by Image-Based Deep Learning. *Cell* 172(5), 1122–1131 (2018).
