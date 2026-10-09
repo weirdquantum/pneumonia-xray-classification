@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from itertools import pairwise
 
 import torch
 from torch import nn
@@ -18,7 +19,7 @@ class SimpleCNN(nn.Module):
         blocks = []
         channels = [3, 32, 64, 128, 256]
         norm = nn.BatchNorm2d if batchnorm else lambda c: nn.Identity()
-        for c_in, c_out in zip(channels[:-1], channels[1:]):
+        for c_in, c_out in pairwise(channels):
             blocks += [
                 nn.Conv2d(c_in, c_out, 3, padding=1, bias=not batchnorm),
                 norm(c_out),
@@ -36,7 +37,7 @@ class SimpleCNN(nn.Module):
 
 
 class SimpleCNNv1(nn.Module):
-    """PyTorch replica of the v1 Keras CNN (legacy/cnn.ipynb): 4 x (conv-pool-dropout), flatten, Dense(128)."""
+    """PyTorch replica of the v1 Keras CNN (cnn.ipynb at git tag v1): 4 x (conv-pool-dropout), flatten, Dense(128)."""
 
     def __init__(self, image_size: int = 100):
         super().__init__()

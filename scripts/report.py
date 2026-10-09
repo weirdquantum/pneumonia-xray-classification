@@ -36,11 +36,13 @@ LABELS = {
 }
 
 
+METRICS = {"auc": "AUC", "accuracy": "Accuracy", "sensitivity": "Sensitivity", "specificity": "Specificity", "f1": "F1"}
+
+
 def label(row) -> str:
     if row["model"] == "ensemble":
         return f"Ensemble ({row['n_members']} models)"
     return LABELS.get(row["model"], row["model"])
-METRICS = ["auc", "accuracy", "sensitivity", "specificity", "f1"]
 
 
 def to_markdown(df: pd.DataFrame) -> str:
@@ -53,9 +55,14 @@ def pct(x: float) -> str:
     return f"{100 * x:.1f}"
 
 
-def mean_sd(values) -> str:
-    v = 100 * np.asarray(values, dtype=float)
-    return f"{v.mean():.1f} ± {v.std(ddof=1):.1f}" if len(v) > 1 else f"{v.mean():.1f}"
+def mean_sd(values, scale: float = 100, digits: int = 1) -> str:
+    v = scale * np.asarray(values, dtype=float)
+    return f"{v.mean():.{digits}f} ± {v.std(ddof=1):.{digits}f}" if len(v) > 1 else f"{v.mean():.{digits}f}"
+
+
+def with_ci(row, key: str) -> str:
+    low, high = row[f"{key}_ci"]
+    return f"{pct(row[key])} ({pct(low)}–{pct(high)})"
 
 
 def load_runs(runs_root: Path) -> pd.DataFrame:
@@ -71,7 +78,7 @@ def load_runs(runs_root: Path) -> pd.DataFrame:
                    "params": m["params"], "threshold": m["val_threshold"], "train_minutes": m["train_minutes"],
                    "best_epoch": m.get("best_epoch"), "epochs_run": m.get("epochs_run"),
                    "acc_at_0.5": m["test_at_0.5"]["accuracy"], "n_members": len(m.get("members", []))}
-            row.update({k: m["test"][k] for k in METRICS + ["tp", "tn", "fp", "fn"]})
+            row.update({k: m["test"][k] for k in [*METRICS, "tp", "tn", "fp", "fn"]})
             row.update({f"{k}_ci": tuple(m["test_ci95"][k]) for k in METRICS})
             for extra, key in (("gradcam.json", "border_share_mean"), ("ablation.json", "description")):
                 if (run / extra).exists():
@@ -107,32 +114,28 @@ def main() -> None:
 
     models = ordered(runs[runs["kind"].isin(["main", "ensemble"])])
     if not models.empty:
-        rows = []
-        for model, g in models.groupby("model", sort=False):
-            rows.append({"Model": label(g.iloc[0]), "Seeds": len(g),
-                         **{k.upper() if k == "auc" else k.capitalize(): mean_sd(g[k]) for k in METRICS},
-                         "Threshold": f"{g['threshold'].mean():.2f} ± {g['threshold'].std(ddof=1):.2f}" if len(g) > 1 else f"{g['threshold'].mean():.2f}",
-                         "Train (min)": f"{g['train_minutes'].mean():.0f}"})
-        tables["main"] = pd.DataFrame(rows)
+        groups = [g for _, g in models.groupby("model", sort=False)]
+        tables["main"] = pd.DataFrame([
+            {"Model": label(g.iloc[0]), "Seeds": len(g), **{name: mean_sd(g[k]) for k, name in METRICS.items()},
+             "Threshold": mean_sd(g["threshold"], scale=1, digits=2), "Train (min)": f"{g['train_minutes'].mean():.0f}"}
+            for g in groups
+        ])
 
         first = models[models["seed"] == args.first_seed]
-        rows = []
-        for _, r in first.iterrows():
-            ci = lambda k: f"{pct(r[k])} ({pct(r[k + '_ci'][0])}–{pct(r[k + '_ci'][1])})"  # noqa: E731
-            rows.append({"Model": label(r), "Params (M)": f"{r['params'] / 1e6:.1f}",
-                         **{k.upper() if k == "auc" else k.capitalize(): ci(k) for k in METRICS},
-                         "Acc @0.5": pct(r["acc_at_0.5"]), "Threshold": f"{r['threshold']:.2f}",
-                         "CAM border share": f"{r['border_share_mean']:.2f}" if pd.notna(r.get("border_share_mean")) else "–"})
-        tables["first_seed"] = pd.DataFrame(rows)
+        tables["first_seed"] = pd.DataFrame([
+            {"Model": label(r), "Params (M)": f"{r['params'] / 1e6:.1f}", **{name: with_ci(r, k) for k, name in METRICS.items()},
+             "Acc @0.5": pct(r["acc_at_0.5"]), "Threshold": f"{r['threshold']:.2f}",
+             "CAM border share": f"{r['border_share_mean']:.2f}" if pd.notna(r.get("border_share_mean")) else "–"}
+            for _, r in first.iterrows()
+        ])
 
         if "ece_raw" in models:
-            rows = []
-            for model, g in models.groupby("model", sort=False):
-                rows.append({"Model": label(g.iloc[0]), "Saturated (raw)": mean_sd(g["saturated_raw"]),
-                             "ECE raw": f"{g['ece_raw'].mean():.3f}", "ECE temperature": f"{g['ece_temperature'].mean():.3f}",
-                             "ECE Platt": f"{g['ece_platt'].mean():.3f}", "Brier raw": f"{g['brier_raw'].mean():.3f}",
-                             "Brier Platt": f"{g['brier_platt'].mean():.3f}"})
-            tables["calibration"] = pd.DataFrame(rows)
+            tables["calibration"] = pd.DataFrame([
+                {"Model": label(g.iloc[0]), "Saturated (raw)": mean_sd(g["saturated_raw"]),
+                 **{f"ECE {m}": f"{g[f'ece_{m.lower()}'].mean():.3f}" for m in ("raw", "temperature", "Platt")},
+                 **{f"Brier {m}": f"{g[f'brier_{m.lower()}'].mean():.3f}" for m in ("raw", "Platt")}}
+                for g in groups
+            ])
 
         fig, ax = plt.subplots(figsize=(5.5, 5))
         for _, r in first.iterrows():
@@ -146,7 +149,7 @@ def main() -> None:
         fig.savefig(figures / "roc_curves.png", dpi=130)
 
         fig, axes = plt.subplots(1, len(first), figsize=(3 * len(first), 3), squeeze=False)
-        for ax, (_, r) in zip(axes[0], first.iterrows()):
+        for ax, (_, r) in zip(axes[0], first.iterrows(), strict=True):
             cm = [[r["tn"], r["fp"]], [r["fn"], r["tp"]]]
             ax.imshow(cm, cmap="Blues")
             for i in range(2):

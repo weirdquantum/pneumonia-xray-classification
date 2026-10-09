@@ -4,6 +4,7 @@
 
 Outputs:
     data/manifest.csv      one row per image (path, split, label, subtype, patient_id); row i <-> images[i]
+                           (the stored val split uses seed 42; training re-draws it from --split-seed)
     data/images.npy        (N, 256, 256) uint8 grayscale cache
     data/data_report.json  split sizes, patient counts and leakage checks
 """
@@ -22,20 +23,18 @@ def main() -> None:
     p.add_argument("--raw", default=".", help="folder containing train/ and test/")
     p.add_argument("--out", default="data")
     p.add_argument("--size", type=int, default=256)
-    p.add_argument("--val-frac", type=float, default=0.15)
-    p.add_argument("--seed", type=int, default=42)
     p.add_argument("--workers", type=int, default=8)
     args = p.parse_args()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    df = assign_val_split(build_manifest(args.raw), args.val_frac, args.seed)
+    df = assign_val_split(build_manifest(args.raw))
 
     patients = {s: set(df.loc[df["split"] == s, "patient_id"]) for s in ("train", "val", "test")}
     assert not patients["train"] & patients["val"], "patient leakage between train and val"
 
     hashes = defaultdict(set)
-    for path, split in zip(df["path"], df["split"]):
+    for path, split in zip(df["path"], df["split"], strict=True):
         hashes[hashlib.md5((Path(args.raw) / path).read_bytes()).hexdigest()].add(split)
     report = {
         "images": df.groupby(["split", "label"]).size().unstack().rename(columns={0: "NORMAL", 1: "PNEUMONIA"}).to_dict("index"),

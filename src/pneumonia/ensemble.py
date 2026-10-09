@@ -24,7 +24,7 @@ from .metrics import binary_metrics, bootstrap_ci, youden_threshold
 def build_ensemble(runs: list[Path], out: Path) -> dict:
     members = [load_predictions(r) for r in runs]
     val0, test0 = members[0]
-    for run, (val, test) in zip(runs, members):
+    for run, (val, test) in zip(runs, members, strict=True):
         if not (val["path"].equals(val0["path"]) and test["path"].equals(test0["path"])):
             raise ValueError(f"{run} was evaluated on different images; ensemble only runs that share a split seed")
 
@@ -63,7 +63,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", required=True, type=Path)
     args = p.parse_args(argv)
     t = build_ensemble(args.runs, args.out)["test"]
-    print(f"ensemble of {len(args.runs)}: acc={t['accuracy']:.4f} auc={t['auc']:.4f} sens={t['sensitivity']:.4f} spec={t['specificity']:.4f}")
+    print(f"ensemble of {len(args.runs)}: acc={t['accuracy']:.4f} auc={t['auc']:.4f} "
+          f"sens={t['sensitivity']:.4f} spec={t['specificity']:.4f}")
 
 
 if __name__ == "__main__":

@@ -31,14 +31,14 @@ def test_val_split_keeps_patients_together_and_stratifies():
         for k in range(1 + p % 3):  # 1-3 images per patient
             rows.append({"path": f"{p}_{k}", "split": "train", "label": label, "patient_id": f"p{p}"})
     rows += [{"path": "t", "split": "test", "label": 0, "patient_id": "t0"}]
-    df = assign_val_split(pd.DataFrame(rows), val_frac=0.2, seed=0)
+    df = assign_val_split(pd.DataFrame(rows), seed=0)
 
     train_p = set(df.loc[df.split == "train", "patient_id"])
     val_p = set(df.loc[df.split == "val", "patient_id"])
     assert train_p.isdisjoint(val_p)
     assert (df.loc[df.path == "t", "split"] == "test").all()
     val_frac = (df.split == "val").sum() / (df.split != "test").sum()
-    assert 0.12 < val_frac < 0.28
+    assert 0.08 < val_frac < 0.22  # ~1/7 of the patients
     assert abs(df.loc[df.split == "val", "label"].mean() - df.loc[df.split == "train", "label"].mean()) < 0.1
 
 

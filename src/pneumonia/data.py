@@ -23,6 +23,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
 CLASSES = ("NORMAL", "PNEUMONIA")
+VAL_FRAC = 0.15
 IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
@@ -51,34 +52,28 @@ def build_manifest(raw_root: str | Path) -> pd.DataFrame:
     """Index every image under ``raw_root`` into a DataFrame."""
     raw_root = Path(raw_root)
     rows = []
-    for source_split in ("train", "val", "test"):
+    for folder_split in ("train", "val", "test"):
         for label, cls in enumerate(CLASSES):
-            folder = raw_root / source_split / cls
-            if not folder.is_dir():
-                continue
-            for path in sorted(folder.glob("*.jpeg")):
+            for path in sorted((raw_root / folder_split / cls).glob("*.jpeg")):
                 patient_id, subtype = parse_filename(path.name)
-                rows.append(
-                    {
-                        "path": str(path.relative_to(raw_root)),
-                        "source_split": source_split,
-                        "split": "test" if source_split == "test" else "train",
-                        "label": label,
-                        "subtype": subtype,
-                        "patient_id": patient_id,
-                    }
-                )
+                rows.append({
+                    "path": str(path.relative_to(raw_root)),
+                    "split": "test" if folder_split == "test" else "train",
+                    "label": label,
+                    "subtype": subtype,
+                    "patient_id": patient_id,
+                })
     if not rows:
         raise FileNotFoundError(f"No images found under {raw_root}/{{train,test}}/{{NORMAL,PNEUMONIA}}")
     return pd.DataFrame(rows)
 
 
-def assign_val_split(df: pd.DataFrame, val_frac: float = 0.15, seed: int = 42) -> pd.DataFrame:
-    """Move a patient-grouped, label-stratified fraction of ``train`` into ``val``."""
-    df = df.copy()
+def assign_val_split(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+    """Re-draw ``val`` as a patient-grouped, label-stratified ~15% of all non-test rows."""
+    df = df.assign(split=df["split"].replace("val", "train"))
     train_idx = df.index[df["split"] == "train"]
     train = df.loc[train_idx]
-    n_splits = max(2, round(1 / val_frac))
+    n_splits = round(1 / VAL_FRAC)
     sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     _, val_pos = next(sgkf.split(train, train["label"], groups=train["patient_id"]))
     df.loc[train_idx[val_pos], "split"] = "val"
@@ -146,17 +141,15 @@ class XrayDataset(Dataset):
 
 
 def load_split(
-    data_dir: str | Path, split: str, augment: bool, image_size: int = 224, split_seed: int | None = None, val_frac: float = 0.15
+    data_dir: str | Path, split: str, augment: bool, image_size: int = 224, split_seed: int = 42
 ) -> tuple[XrayDataset, pd.DataFrame]:
-    """Dataset for one split. ``split_seed`` re-draws the patient-level train/val split (the test split never moves);
-    ``None`` keeps the split stored in manifest.csv, which ``prepare_data.py`` drew with seed 42."""
+    """Dataset for ``train``, ``val`` or ``test``; ``split_seed`` draws the train/val split (test never moves)."""
     data_dir = Path(data_dir)
     manifest = pd.read_csv(data_dir / "manifest.csv")
-    if split_seed is not None:
-        manifest = assign_val_split(manifest.assign(split=manifest["split"].replace("val", "train")), val_frac, split_seed)
     n_cached = np.load(data_dir / "images.npy", mmap_mode="r").shape[0]
     if n_cached != len(manifest):
         raise ValueError(f"images.npy has {n_cached} images but manifest.csv has {len(manifest)} rows; rerun scripts/prepare_data.py")
+    manifest = assign_val_split(manifest, split_seed)
     rows = manifest[manifest["split"] == split]
     ds = XrayDataset(data_dir / "images.npy", rows.index.to_numpy(), rows["label"].to_numpy(), build_transforms(image_size, augment))
     return ds, rows

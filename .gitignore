@@ -4,20 +4,17 @@ test/
 val/
 chest_xray/
 
-# Generated cache and logs (python scripts/prepare_data.py rebuilds data/)
+# Image cache built by scripts/prepare_data.py
 data/
-logs/
 
-# Model weights; per-run metrics, histories and predictions under runs/ are committed
+# Model weights (runs/ keeps metrics and predictions only)
 *.pt
-*.h5
-*.keras
-*.pkl
 
 # Environment / OS
 .venv/
 *.egg-info/
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
 .DS_Store

@@ -1,8 +1,0 @@
-model=simple_cnn device=cuda amp=True out=/content/work/ablation/epochs_5
-train=4494 (normal 1151 / pneumonia 3343)  val=722  test=624
-epoch  1/5 [finetune] train_loss=0.1988 val_loss=1.1169 val_auc=0.9720 val_sens=0.039 val_spec=1.000 (5s)
-epoch  2/5 [finetune] train_loss=0.1379 val_loss=0.3111 val_auc=0.9839 val_sens=0.662 val_spec=1.000 (4s)
-epoch  3/5 [finetune] train_loss=0.1100 val_loss=0.1061 val_auc=0.9900 val_sens=0.983 val_spec=0.816 (4s)
-epoch  4/5 [finetune] train_loss=0.0915 val_loss=0.0687 val_auc=0.9924 val_sens=0.906 val_spec=0.989 (4s)
-epoch  5/5 [finetune] train_loss=0.0759 val_loss=0.0559 val_auc=0.9935 val_sens=0.938 val_spec=0.984 (4s)
-TEST (threshold 0.284 from val): acc=0.8462 auc=0.9510 sens=0.9949 spec=0.5983 f1=0.8899

@@ -31,6 +31,6 @@ def test_border_share_is_nan_for_empty_heatmap():
 
 
 def test_v1_cnn_matches_keras_parameter_count():
-    # legacy/cnn.ipynb model.summary(): 197,026 params with a 2-way softmax; one logit drops 129 of them.
+    # v1 cnn.ipynb model.summary(): 197,026 params with a 2-way softmax; one logit drops 129 of them.
     spec = build_model("simple_cnn_v1", pretrained=False, image_size=100)
     assert sum(p.numel() for p in spec.model.parameters()) == 197_026 - 129

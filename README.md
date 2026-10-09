@@ -67,7 +67,7 @@
 
 ### 版本演进
 
-| 方法 | v1（Keras / sklearn） | v2（单次运行） | v3（3 种子均值 ± 标准差） |
+| 方法 | [v1](https://github.com/weirdquantum/pneumonia-xray-classification/tree/v1)（Keras / sklearn） | [v2](https://github.com/weirdquantum/pneumonia-xray-classification/tree/v2)（单次运行） | v3（3 种子均值 ± 标准差） |
 |---|---|---|---|
 | CNN（从零训练） | 78.0% | 89.1% | 88.2 ± 3.2% |
 | ResNet50 | 80.8%（冻结特征 + 逻辑回归） | 93.3% | 92.0 ± 1.3% |
@@ -128,7 +128,7 @@ v3 的每个种子都会重新抽取训练/验证划分（训练加验证共 521
 
 - **输入**：灰度图复制为 3 通道，224×224，ImageNet 均值方差标准化。
 - **数据增强**（仅训练）：随机裁剪缩放（面积 70–100%）、±10° 旋转、±5% 平移、亮度/对比度扰动。不使用水平翻转，因为心脏位于左侧，翻转会产生解剖上不合理的图像。
-- **类别不平衡**：`BCEWithLogitsLoss` 的 `pos_weight = 正常数 / 肺炎数`；可选 Focal Loss（`--loss focal`）。
+- **类别不平衡**：`BCEWithLogitsLoss` 的 `pos_weight = 正常数 / 肺炎数`。
 - **两阶段微调**：先冻结主干网络（参数、BatchNorm 统计量和 dropout 全部固定），训练 2 轮新分类头（lr 1e-3）；再全部解冻，用 AdamW + OneCycle 学习率微调。梯度裁剪 1.0，CUDA 上使用混合精度。
 - **模型选择**：按验证集上的 loss（由原始 logits 计算）选择 checkpoint 并早停。验证集 AUC 在 0.998 附近饱和，不适合用来挑选模型。测试集只在最后评估一次。
 - **评估**：准确率、敏感度、特异度、精确率、F1、ROC-AUC、混淆矩阵；按患者 bootstrap 1000 次估计置信区间；3 个种子（42 / 43 / 44）报告均值 ± 标准差。
@@ -157,7 +157,7 @@ python scripts/experiments.py
 `experiments.py` 依次运行主实验、消融实验、Grad-CAM、集成、校准和汇总报告，已完成的训练会自动跳过。加上 `--plan smoke` 可以在几分钟内跑通全流程，用来检查环境。单独训练一个模型：
 
 ```bash
-python -m pneumonia.train --model resnet50 --seed 42 --split-seed 42 --out runs/main/resnet50/seed42
+python -m pneumonia.train --model resnet50 --seed 42 --out runs/main/resnet50/seed42
 ```
 
 程序会自动选择 CUDA、Apple MPS 或 CPU。运行单元测试：
@@ -182,12 +182,12 @@ colab/          run_all_experiments.ipynb（Colab 一键运行）
 runs/main/<model>/seed<k>/   每次运行的指标、训练曲线、验证/测试集预测、校准结果（权重未提交）
 runs/ablation/<name>/        消融实验
 runs/ensemble/seed<k>/       集成结果
-runs/v2/                     v2 的单次运行结果，供对比
 results/        汇总表（main / first_seed / ablation / calibration / all_runs）
 figures/        ROC 曲线、混淆矩阵、消融、可靠性曲线、Grad-CAM
-tests/          单元测试（CI 自动运行）
-legacy/         v1 的三个 Colab notebook（TensorFlow / sklearn）
+tests/          单元测试（CI 自动运行 ruff 和 pytest）
 ```
+
+历史版本保存在 git 标签中：[`v1`](https://github.com/weirdquantum/pneumonia-xray-classification/tree/v1) 是最初的三个 Colab notebook（TensorFlow / sklearn），[`v2`](https://github.com/weirdquantum/pneumonia-xray-classification/tree/v2) 是 PyTorch 重写后的单种子版本。
 
 ## 局限与后续工作
 

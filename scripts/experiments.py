@@ -1,4 +1,4 @@
-"""Run every v3 experiment end to end, resumably.
+"""Run every experiment end to end, resumably.
 
     python scripts/experiments.py --runs-root runs            # full plan
     python scripts/experiments.py --plan smoke --runs-root /tmp/smoke
@@ -50,19 +50,12 @@ def log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
-def run(cmd: list[str], log_file: Path | None = None) -> bool:
+def run(*cmd: str) -> bool:
     log(" ".join(cmd))
-    fh = open(log_file, "a") if log_file else None
-    with subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as proc:
-        for line in proc.stdout:
-            print(line, end="", flush=True)
-            if fh:
-                fh.write(line)
-    if fh:
-        fh.close()
-    if proc.returncode != 0:
-        log(f"FAILED (exit {proc.returncode}): {' '.join(cmd)}")
-    return proc.returncode == 0
+    returncode = subprocess.run(cmd, cwd=ROOT).returncode
+    if returncode != 0:
+        log(f"FAILED (exit {returncode}): {' '.join(cmd)}")
+    return returncode == 0
 
 
 def train(name: str, args: list[str], dest: Path, opts, keep_weights: bool) -> bool:
@@ -72,8 +65,7 @@ def train(name: str, args: list[str], dest: Path, opts, keep_weights: bool) -> b
     work = opts.work_dir / dest.relative_to(opts.runs_root)
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
-    cmd = [sys.executable, "-m", "pneumonia.train", "--data-dir", str(opts.data_dir), "--out", str(work), *args, *opts.extra]
-    ok = run(cmd, work / "train.log")
+    ok = run(sys.executable, "-m", "pneumonia.train", "--data-dir", str(opts.data_dir), "--out", str(work), *args, *opts.extra)
     if ok:
         if not keep_weights:
             (work / "best.pt").unlink(missing_ok=True)
@@ -106,42 +98,41 @@ def main() -> None:
     if not (opts.data_dir / "images.npy").exists():
         sys.exit(f"{opts.data_dir}/images.npy not found: run scripts/prepare_data.py first")
 
-    failed, first = [], opts.seeds[0]
-    start = time.time()
+    py, runs, first = sys.executable, opts.runs_root, opts.seeds[0]
+    failed, start = [], time.time()
     for seed in opts.seeds:
         for model in opts.models:
-            dest = opts.runs_root / "main" / model / f"seed{seed}"
+            dest = runs / "main" / model / f"seed{seed}"
             args = ["--model", model, "--seed", str(seed), "--split-seed", str(seed)]
             if not train(f"{model} seed {seed}", args, dest, opts, keep_weights=seed == first):
                 failed.append(str(dest))
     if not opts.skip_ablation:
         for name, (description, args) in ablations.items():
-            dest = opts.runs_root / "ablation" / name
-            if not train(f"ablation {name}", [*args, "--seed", str(first), "--split-seed", str(first)], dest, opts, keep_weights=False):
+            dest = runs / "ablation" / name
+            seed_args = ["--seed", str(first), "--split-seed", str(first)]
+            if not train(f"ablation {name}", [*args, *seed_args], dest, opts, keep_weights=False):
                 failed.append(str(dest))
             elif not (dest / "ablation.json").exists():
                 (dest / "ablation.json").write_text(json.dumps({"description": description, "args": args}, indent=2))
 
-    figures = out_root / "figures"
     for model in opts.models:
-        dest = opts.runs_root / "main" / model / f"seed{first}"
-        if (dest / "best.pt").exists() and not (dest / "gradcam.json").exists():
-            if not run([sys.executable, "-m", "pneumonia.gradcam", "--run", str(dest), "--data-dir", str(opts.data_dir), "--figures", str(figures)]):
-                failed.append(f"gradcam {dest}")
+        dest = runs / "main" / model / f"seed{first}"
+        needs_cam = (dest / "best.pt").exists() and not (dest / "gradcam.json").exists()
+        if needs_cam and not run(py, "-m", "pneumonia.gradcam", "--run", str(dest), "--data-dir", str(opts.data_dir),
+                                 "--figures", str(out_root / "figures")):
+            failed.append(f"gradcam {dest}")
 
     for seed in opts.seeds:
-        members = [opts.runs_root / "main" / m / f"seed{seed}" for m in opts.models]
-        members = [m for m in members if (m / "metrics.json").exists()]
-        if len(members) >= 2:
-            if not run([sys.executable, "-m", "pneumonia.ensemble", "--out", str(opts.runs_root / "ensemble" / f"seed{seed}"), *map(str, members)]):
-                failed.append(f"ensemble seed{seed}")
+        members = [runs / "main" / m / f"seed{seed}" for m in opts.models]
+        members = [str(m) for m in members if (m / "metrics.json").exists()]
+        if len(members) >= 2 and not run(py, "-m", "pneumonia.ensemble", "--out", str(runs / "ensemble" / f"seed{seed}"), *members):
+            failed.append(f"ensemble seed{seed}")
 
-    to_calibrate = sorted(str(p.parent) for p in opts.runs_root.glob("main/*/seed*/metrics.json"))
-    to_calibrate += sorted(str(p.parent) for p in opts.runs_root.glob("ensemble/seed*/metrics.json"))
-    if to_calibrate and not run([sys.executable, "-m", "pneumonia.calibrate", *to_calibrate]):
+    to_calibrate = sorted(str(p.parent) for p in runs.glob("main/*/seed*/metrics.json"))
+    to_calibrate += sorted(str(p.parent) for p in runs.glob("ensemble/seed*/metrics.json"))
+    if to_calibrate and not run(py, "-m", "pneumonia.calibrate", *to_calibrate):
         failed.append("calibrate")
-    if not run([sys.executable, str(ROOT / "scripts" / "report.py"), "--runs-root", str(opts.runs_root), "--out", str(out_root),
-                "--first-seed", str(first)]):
+    if not run(py, str(ROOT / "scripts" / "report.py"), "--runs-root", str(runs), "--out", str(out_root), "--first-seed", str(first)):
         failed.append("report")
 
     log(f"finished in {(time.time() - start) / 60:.0f} min; {len(failed)} failed step(s)")

@@ -101,7 +101,7 @@ def calibrate_run(run: Path) -> dict:
 
 def reliability_figure(runs: list[Path], labels: list[str], out: Path, n_bins: int = 10) -> None:
     fig, axes = plt.subplots(1, len(runs), figsize=(3.2 * len(runs), 3.4), squeeze=False, sharey=True)
-    for ax, run, label in zip(axes[0], runs, labels):
+    for ax, run, label in zip(axes[0], runs, labels, strict=True):
         val, test = load_predictions(run)
         cal = Calibrator(val["logit"].to_numpy(), val["label"].to_numpy())
         y = test["label"].to_numpy()

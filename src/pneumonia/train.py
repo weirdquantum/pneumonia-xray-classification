@@ -44,20 +44,6 @@ DEFAULTS = {
 }
 
 
-class FocalLoss(nn.Module):
-    """Binary focal loss; ``alpha`` weights the positive class."""
-
-    def __init__(self, alpha: float, gamma: float = 2.0):
-        super().__init__()
-        self.alpha, self.gamma = alpha, gamma
-
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        bce = nn.functional.binary_cross_entropy_with_logits(logits, target, reduction="none")
-        p_t = torch.exp(-bce)
-        alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
-        return (alpha_t * (1 - p_t) ** self.gamma * bce).mean()
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", required=True, choices=MODEL_NAMES + ABLATION_MODEL_NAMES)
@@ -68,21 +54,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--lr", type=float, help="fine-tuning learning rate")
     p.add_argument("--head-lr", type=float, default=1e-3)
     p.add_argument("--batch-size", type=int)
-    p.add_argument("--patience", type=int, help="early-stopping patience on the selection metric")
-    p.add_argument("--select", choices=("loss", "auc"), default="loss",
-                   help="checkpoint selection metric on validation (val AUC saturates near 0.999, so loss is the default)")
+    p.add_argument("--patience", type=int, help="early-stopping patience on validation loss")
     p.add_argument("--weight-decay", type=float, default=1e-4)
-    p.add_argument("--loss", choices=("bce", "focal"), default="bce")
     p.add_argument("--no-class-weight", action="store_true")
     p.add_argument("--no-augment", action="store_true")
     p.add_argument("--no-shuffle", action="store_true", help="ablation: feed training data in class-sorted order (the v1 bug)")
     p.add_argument("--no-amp", action="store_true", help="disable mixed precision (only used on CUDA)")
-    p.add_argument("--from-scratch", action="store_true", help="ignore ImageNet weights")
     p.add_argument("--image-size", type=int, default=224)
     p.add_argument("--num-workers", type=int, default=min(4, os.cpu_count() or 1))
     p.add_argument("--device", default="auto")
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--split-seed", type=int, default=None, help="re-draw the patient-level val split (default: manifest split)")
+    p.add_argument("--split-seed", type=int, default=42, help="seed of the patient-level train/val split")
     p.add_argument("--max-steps", type=int, default=0, help="debug: stop each training epoch after N steps (evaluation stays full)")
     args = p.parse_args(argv)
     for key, value in DEFAULTS[args.model].items():
@@ -183,13 +165,10 @@ def main(argv: list[str] | None = None) -> None:
     n_pos = int(train_rows["label"].sum())
     n_neg = len(train_rows) - n_pos
     print(f"train={len(train_ds)} (normal {n_neg} / pneumonia {n_pos})  val={len(val_ds)}  test={len(test_ds)}")
-    if args.loss == "focal":
-        criterion = FocalLoss(alpha=0.5 if args.no_class_weight else n_neg / (n_neg + n_pos))
-    else:
-        pos_weight = 1.0 if args.no_class_weight else n_neg / n_pos
-        criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, device=device))
+    pos_weight = 1.0 if args.no_class_weight else n_neg / n_pos
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, device=device))
 
-    spec = build_model(args.model, pretrained=not args.from_scratch, image_size=args.image_size)
+    spec = build_model(args.model, image_size=args.image_size)
     model = spec.model.to(device)
     head_epochs = args.head_epochs if spec.pretrained else 0
     n_params = sum(p.numel() for p in model.parameters())
@@ -199,7 +178,8 @@ def main(argv: list[str] | None = None) -> None:
         with torch.no_grad():
             return criterion(torch.from_numpy(logits).to(device), torch.from_numpy(labels).to(device)).item()
 
-    history, best_score, best_epoch, stale = [], (-np.inf, -np.inf), -1, 0
+    # Checkpoints are selected on validation loss: val AUC saturates near 0.999 and cannot rank epochs.
+    history, best_loss, best_epoch, stale = [], np.inf, -1, 0
     start = time.time()
     for epoch in range(args.epochs):
         if epoch == 0 and head_epochs > 0:
@@ -226,16 +206,16 @@ def main(argv: list[str] | None = None) -> None:
         history.append(dict(epoch=epoch + 1, stage=stage, train_loss=train_loss, val_loss=val_loss, val_auc=vm["auc"],
                             val_acc=vm["accuracy"], val_sens=vm["sensitivity"], val_spec=vm["specificity"], seconds=time.time() - t0))
         print(f"epoch {epoch + 1:2d}/{args.epochs} [{stage}] train_loss={train_loss:.4f} val_loss={val_loss:.4f} "
-              f"val_auc={vm['auc']:.4f} val_sens={vm['sensitivity']:.3f} val_spec={vm['specificity']:.3f} ({time.time() - t0:.0f}s)", flush=True)
+              f"val_auc={vm['auc']:.4f} val_sens={vm['sensitivity']:.3f} val_spec={vm['specificity']:.3f} "
+              f"({time.time() - t0:.0f}s)", flush=True)
 
-        score = (-val_loss, 0.0) if args.select == "loss" else (round(vm["auc"], 4), -val_loss)
-        if score > best_score:
-            best_score, best_epoch, stale = score, epoch + 1, 0
+        if val_loss < best_loss:
+            best_loss, best_epoch, stale = val_loss, epoch + 1, 0
             torch.save(model.state_dict(), args.out / "best.pt")
         elif stage == "finetune":
             stale += 1
             if stale >= args.patience:
-                print(f"early stopping: no val {args.select} improvement for {args.patience} epochs")
+                print(f"early stopping: no val loss improvement for {args.patience} epochs")
                 break
     train_seconds = time.time() - start
     pd.DataFrame(history).to_csv(args.out / "history.csv", index=False)
