@@ -1,0 +1,106 @@
+{
+  "model": "efficientnet_b0",
+  "config": {
+    "model": "efficientnet_b0",
+    "data_dir": "/content/data",
+    "out": "/content/work/main/efficientnet_b0/seed42",
+    "epochs": 12,
+    "head_epochs": 2,
+    "lr": 0.0003,
+    "head_lr": 0.001,
+    "batch_size": 32,
+    "patience": 5,
+    "select": "loss",
+    "weight_decay": 0.0001,
+    "loss": "bce",
+    "no_class_weight": false,
+    "no_augment": false,
+    "no_shuffle": false,
+    "no_amp": false,
+    "from_scratch": false,
+    "image_size": 224,
+    "num_workers": 4,
+    "device": "auto",
+    "seed": 42,
+    "split_seed": 42,
+    "max_steps": 0
+  },
+  "environment": {
+    "device": "NVIDIA A100-SXM4-40GB",
+    "torch": "2.11.0+cu130",
+    "python": "3.13.15",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.39",
+    "git_commit": "b624986",
+    "finished_at": "2026-10-09T18:14:14+00:00"
+  },
+  "params": 4008829,
+  "best_epoch": 11,
+  "epochs_run": 12,
+  "train_minutes": 1.6579830209414164,
+  "val_loss": 0.02292230911552906,
+  "val_threshold": 0.773387610912323,
+  "val": {
+    "threshold": 0.773387610912323,
+    "accuracy": 0.9875346260387812,
+    "sensitivity": 0.9849624060150376,
+    "specificity": 0.9947368421052631,
+    "precision": 0.9980952380952381,
+    "npv": 0.9593908629441624,
+    "f1": 0.9914853358561967,
+    "auc": 0.9981499802136921,
+    "tp": 524,
+    "tn": 189,
+    "fp": 1,
+    "fn": 8
+  },
+  "test_at_0.5": {
+    "threshold": 0.5,
+    "accuracy": 0.9118589743589743,
+    "sensitivity": 0.9948717948717949,
+    "specificity": 0.7735042735042735,
+    "precision": 0.8798185941043084,
+    "npv": 0.9890710382513661,
+    "f1": 0.9338146811070999,
+    "auc": 0.9879026955950032,
+    "tp": 388,
+    "tn": 181,
+    "fp": 53,
+    "fn": 2
+  },
+  "test": {
+    "threshold": 0.773387610912323,
+    "accuracy": 0.9246794871794872,
+    "sensitivity": 0.9923076923076923,
+    "specificity": 0.811965811965812,
+    "precision": 0.8979118329466357,
+    "npv": 0.9844559585492227,
+    "f1": 0.9427527405602922,
+    "auc": 0.9879026955950032,
+    "tp": 387,
+    "tn": 190,
+    "fp": 44,
+    "fn": 3
+  },
+  "test_ci95": {
+    "accuracy": [
+      0.9001663212703322,
+      0.9456695238233248
+    ],
+    "sensitivity": [
+      0.9825414533840836,
+      1.0
+    ],
+    "specificity": [
+      0.7563541666666667,
+      0.8617994579945799
+    ],
+    "f1": [
+      0.9224917619546565,
+      0.9596979636652182
+    ],
+    "auc": [
+      0.9788762487966381,
+      0.9941410298811912
+    ]
+  }
+}

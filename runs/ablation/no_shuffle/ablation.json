@@ -1,0 +1,8 @@
+{
+  "description": "CNN with class-sorted (unshuffled) batches, the v1 bug",
+  "args": [
+    "--model",
+    "simple_cnn",
+    "--no-shuffle"
+  ]
+}

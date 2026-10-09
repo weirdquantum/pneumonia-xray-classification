@@ -1,0 +1,16 @@
+{
+  "description": "v1 recipe: v1 CNN, 100px, no augment/class weight/shuffle, 5 epochs, batch 10",
+  "args": [
+    "--model",
+    "simple_cnn_v1",
+    "--image-size",
+    "100",
+    "--no-augment",
+    "--no-class-weight",
+    "--no-shuffle",
+    "--epochs",
+    "5",
+    "--batch-size",
+    "10"
+  ]
+}

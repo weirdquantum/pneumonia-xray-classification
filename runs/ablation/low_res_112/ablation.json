@@ -1,0 +1,9 @@
+{
+  "description": "CNN at 112x112 input",
+  "args": [
+    "--model",
+    "simple_cnn",
+    "--image-size",
+    "112"
+  ]
+}

@@ -1,0 +1,15 @@
+model=densenet121 device=cuda amp=True out=/content/work/main/densenet121/seed43
+train=4502 (normal 1147 / pneumonia 3355)  val=714  test=624
+epoch  1/12 [head] train_loss=0.1853 val_loss=0.1174 val_auc=0.9795 val_sens=0.887 val_spec=0.974 (7s)
+epoch  2/12 [head] train_loss=0.1147 val_loss=0.0994 val_auc=0.9831 val_sens=0.881 val_spec=0.979 (5s)
+epoch  3/12 [finetune] train_loss=0.1276 val_loss=0.0829 val_auc=0.9896 val_sens=0.983 val_spec=0.907 (13s)
+epoch  4/12 [finetune] train_loss=0.0613 val_loss=0.0375 val_auc=0.9964 val_sens=0.977 val_spec=0.979 (12s)
+epoch  5/12 [finetune] train_loss=0.0497 val_loss=0.0842 val_auc=0.9969 val_sens=0.992 val_spec=0.897 (12s)
+epoch  6/12 [finetune] train_loss=0.0333 val_loss=0.0324 val_auc=0.9977 val_sens=0.987 val_spec=0.974 (12s)
+epoch  7/12 [finetune] train_loss=0.0277 val_loss=0.0328 val_auc=0.9975 val_sens=0.990 val_spec=0.979 (12s)
+epoch  8/12 [finetune] train_loss=0.0180 val_loss=0.0377 val_auc=0.9974 val_sens=0.977 val_spec=0.974 (12s)
+epoch  9/12 [finetune] train_loss=0.0133 val_loss=0.0339 val_auc=0.9981 val_sens=0.985 val_spec=0.979 (13s)
+epoch 10/12 [finetune] train_loss=0.0135 val_loss=0.0362 val_auc=0.9983 val_sens=0.987 val_spec=0.974 (12s)
+epoch 11/12 [finetune] train_loss=0.0097 val_loss=0.0345 val_auc=0.9983 val_sens=0.987 val_spec=0.974 (12s)
+early stopping: no val loss improvement for 5 epochs
+TEST (threshold 0.768 from val): acc=0.8686 auc=0.9804 sens=0.9974 spec=0.6538 f1=0.9047

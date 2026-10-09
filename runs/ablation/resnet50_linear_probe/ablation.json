@@ -1,0 +1,11 @@
+{
+  "description": "ResNet50 with frozen ImageNet features, head only (v1-style transfer)",
+  "args": [
+    "--model",
+    "resnet50",
+    "--epochs",
+    "5",
+    "--head-epochs",
+    "5"
+  ]
+}

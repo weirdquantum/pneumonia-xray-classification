@@ -1,0 +1,10 @@
+model=simple_cnn_v1 device=cuda amp=True out=/content/work/ablation/v1_like
+train=4494 (normal 1151 / pneumonia 3343)  val=722  test=624
+epoch  1/5 [finetune] train_loss=1.2662 val_loss=25.8998 val_auc=0.5000 val_sens=1.000 val_spec=0.000 (4s)
+epoch  2/5 [finetune] train_loss=4.8603 val_loss=39.1321 val_auc=0.5000 val_sens=1.000 val_spec=0.000 (3s)
+epoch  3/5 [finetune] train_loss=4.8060 val_loss=33.8070 val_auc=0.5000 val_sens=1.000 val_spec=0.000 (3s)
+epoch  4/5 [finetune] train_loss=3.9989 val_loss=8.6893 val_auc=0.4702 val_sens=1.000 val_spec=0.000 (3s)
+epoch  5/5 [finetune] train_loss=2.6246 val_loss=0.5914 val_auc=0.1975 val_sens=1.000 val_spec=0.000 (3s)
+/usr/local/lib/python3.13/dist-packages/numpy/lib/_nanfunctions_impl.py:1437: RuntimeWarning: All-NaN slice encountered
+  return _nanquantile_unchecked(
+TEST (threshold 1.000 from val): acc=0.3750 auc=0.2253 sens=0.0000 spec=1.0000 f1=nan

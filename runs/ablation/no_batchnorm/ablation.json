@@ -1,0 +1,7 @@
+{
+  "description": "CNN without BatchNorm",
+  "args": [
+    "--model",
+    "simple_cnn_nobn"
+  ]
+}

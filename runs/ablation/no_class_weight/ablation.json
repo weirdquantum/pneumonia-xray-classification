@@ -1,0 +1,8 @@
+{
+  "description": "CNN without class-weighted loss",
+  "args": [
+    "--model",
+    "simple_cnn",
+    "--no-class-weight"
+  ]
+}

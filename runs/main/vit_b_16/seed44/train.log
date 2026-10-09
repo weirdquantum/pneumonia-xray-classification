@@ -1,0 +1,14 @@
+model=vit_b_16 device=cuda amp=True out=/content/work/main/vit_b_16/seed44
+train=4437 (normal 1148 / pneumonia 3289)  val=779  test=624
+epoch  1/10 [head] train_loss=0.1457 val_loss=0.0953 val_auc=0.9890 val_sens=0.877 val_spec=0.990 (5s)
+epoch  2/10 [head] train_loss=0.0906 val_loss=0.0704 val_auc=0.9920 val_sens=0.925 val_spec=0.974 (4s)
+epoch  3/10 [finetune] train_loss=0.0757 val_loss=0.1092 val_auc=0.9968 val_sens=0.997 val_spec=0.834 (8s)
+epoch  4/10 [finetune] train_loss=0.0714 val_loss=0.0397 val_auc=0.9973 val_sens=0.971 val_spec=0.974 (8s)
+epoch  5/10 [finetune] train_loss=0.0566 val_loss=0.0451 val_auc=0.9966 val_sens=0.966 val_spec=0.984 (8s)
+epoch  6/10 [finetune] train_loss=0.0373 val_loss=0.0324 val_auc=0.9983 val_sens=0.983 val_spec=0.969 (8s)
+epoch  7/10 [finetune] train_loss=0.0270 val_loss=0.0441 val_auc=0.9983 val_sens=0.991 val_spec=0.953 (8s)
+epoch  8/10 [finetune] train_loss=0.0182 val_loss=0.0448 val_auc=0.9986 val_sens=0.993 val_spec=0.964 (8s)
+epoch  9/10 [finetune] train_loss=0.0215 val_loss=0.0326 val_auc=0.9986 val_sens=0.981 val_spec=0.979 (8s)
+epoch 10/10 [finetune] train_loss=0.0176 val_loss=0.0325 val_auc=0.9987 val_sens=0.980 val_spec=0.979 (8s)
+early stopping: no val loss improvement for 4 epochs
+TEST (threshold 0.785 from val): acc=0.9038 auc=0.9835 sens=0.9974 spec=0.7479 f1=0.9284

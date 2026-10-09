@@ -1,0 +1,25 @@
+model=resnet50 device=cuda amp=True out=/content/work/main/resnet50/seed42
+train=4494 (normal 1151 / pneumonia 3343)  val=722  test=624
+Downloading: "https://download.pytorch.org/models/resnet50-11ad3fa6.pth" to /root/.cache/torch/hub/checkpoints/resnet50-11ad3fa6.pth
+
+  0%|          | 0.00/97.8M [00:00<?, ?B/s]
+ 10%|█         | 10.0M/97.8M [00:00<00:00, 105MB/s]
+ 34%|███▍      | 33.1M/97.8M [00:00<00:00, 186MB/s]
+ 57%|█████▋    | 56.1M/97.8M [00:00<00:00, 211MB/s]
+ 81%|████████  | 78.9M/97.8M [00:00<00:00, 222MB/s]
+100%|██████████| 97.8M/97.8M [00:00<00:00, 212MB/s]
+epoch  1/12 [head] train_loss=0.2019 val_loss=0.1696 val_auc=0.9682 val_sens=0.959 val_spec=0.758 (6s)
+epoch  2/12 [head] train_loss=0.1224 val_loss=0.1218 val_auc=0.9780 val_sens=0.940 val_spec=0.879 (4s)
+/content/repo/src/pneumonia/train.py:145: UserWarning: Detected call of `lr_scheduler.step()` before `optimizer.step()`. In PyTorch 1.1.0 and later, you should call them in the opposite order: `optimizer.step()` before `lr_scheduler.step()`.  Failure to do this will result in PyTorch skipping the first value of the learning rate schedule. See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
+  scheduler.step()
+epoch  3/12 [finetune] train_loss=0.1456 val_loss=0.0542 val_auc=0.9943 val_sens=0.976 val_spec=0.953 (6s)
+epoch  4/12 [finetune] train_loss=0.0732 val_loss=0.0441 val_auc=0.9955 val_sens=0.970 val_spec=0.958 (6s)
+epoch  5/12 [finetune] train_loss=0.0539 val_loss=0.0783 val_auc=0.9956 val_sens=0.987 val_spec=0.900 (6s)
+epoch  6/12 [finetune] train_loss=0.0439 val_loss=0.0670 val_auc=0.9971 val_sens=0.994 val_spec=0.937 (6s)
+epoch  7/12 [finetune] train_loss=0.0301 val_loss=0.0349 val_auc=0.9971 val_sens=0.983 val_spec=0.974 (6s)
+epoch  8/12 [finetune] train_loss=0.0209 val_loss=0.0464 val_auc=0.9978 val_sens=0.994 val_spec=0.937 (6s)
+epoch  9/12 [finetune] train_loss=0.0181 val_loss=0.0489 val_auc=0.9972 val_sens=0.994 val_spec=0.942 (6s)
+epoch 10/12 [finetune] train_loss=0.0130 val_loss=0.0183 val_auc=0.9980 val_sens=0.987 val_spec=1.000 (6s)
+epoch 11/12 [finetune] train_loss=0.0095 val_loss=0.0197 val_auc=0.9980 val_sens=0.989 val_spec=0.989 (6s)
+epoch 12/12 [finetune] train_loss=0.0063 val_loss=0.0213 val_auc=0.9980 val_sens=0.991 val_spec=0.984 (6s)
+TEST (threshold 0.498 from val): acc=0.9071 auc=0.9750 sens=0.9974 spec=0.7564 f1=0.9306

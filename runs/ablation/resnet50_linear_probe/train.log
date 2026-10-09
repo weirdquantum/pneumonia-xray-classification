@@ -1,0 +1,8 @@
+model=resnet50 device=cuda amp=True out=/content/work/ablation/resnet50_linear_probe
+train=4494 (normal 1151 / pneumonia 3343)  val=722  test=624
+epoch  1/5 [head] train_loss=0.2019 val_loss=0.1696 val_auc=0.9682 val_sens=0.959 val_spec=0.758 (6s)
+epoch  2/5 [head] train_loss=0.1224 val_loss=0.1218 val_auc=0.9780 val_sens=0.940 val_spec=0.879 (4s)
+epoch  3/5 [head] train_loss=0.1047 val_loss=0.1042 val_auc=0.9822 val_sens=0.938 val_spec=0.926 (4s)
+epoch  4/5 [head] train_loss=0.0935 val_loss=0.1250 val_auc=0.9832 val_sens=0.976 val_spec=0.779 (4s)
+epoch  5/5 [head] train_loss=0.0904 val_loss=0.0936 val_auc=0.9854 val_sens=0.953 val_spec=0.911 (4s)
+TEST (threshold 0.695 from val): acc=0.8381 auc=0.9322 sens=0.9282 spec=0.6880 f1=0.8776

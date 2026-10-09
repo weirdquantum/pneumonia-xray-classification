@@ -1,0 +1,9 @@
+{
+  "description": "CNN trained for 5 epochs",
+  "args": [
+    "--model",
+    "simple_cnn",
+    "--epochs",
+    "5"
+  ]
+}

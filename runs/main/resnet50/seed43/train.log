@@ -1,0 +1,18 @@
+model=resnet50 device=cuda amp=True out=/content/work/main/resnet50/seed43
+train=4502 (normal 1147 / pneumonia 3355)  val=714  test=624
+epoch  1/12 [head] train_loss=0.2073 val_loss=0.1720 val_auc=0.9690 val_sens=0.954 val_spec=0.809 (6s)
+epoch  2/12 [head] train_loss=0.1239 val_loss=0.1342 val_auc=0.9775 val_sens=0.956 val_spec=0.866 (4s)
+/content/repo/src/pneumonia/train.py:145: UserWarning: Detected call of `lr_scheduler.step()` before `optimizer.step()`. In PyTorch 1.1.0 and later, you should call them in the opposite order: `optimizer.step()` before `lr_scheduler.step()`.  Failure to do this will result in PyTorch skipping the first value of the learning rate schedule. See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
+  scheduler.step()
+epoch  3/12 [finetune] train_loss=0.1517 val_loss=0.0643 val_auc=0.9907 val_sens=0.971 val_spec=0.959 (6s)
+epoch  4/12 [finetune] train_loss=0.0639 val_loss=0.0489 val_auc=0.9946 val_sens=0.987 val_spec=0.964 (6s)
+epoch  5/12 [finetune] train_loss=0.0604 val_loss=0.0430 val_auc=0.9960 val_sens=0.985 val_spec=0.954 (6s)
+epoch  6/12 [finetune] train_loss=0.0453 val_loss=0.0597 val_auc=0.9936 val_sens=0.958 val_spec=0.979 (6s)
+epoch  7/12 [finetune] train_loss=0.0252 val_loss=0.0326 val_auc=0.9972 val_sens=0.983 val_spec=0.974 (6s)
+epoch  8/12 [finetune] train_loss=0.0230 val_loss=0.0396 val_auc=0.9968 val_sens=0.981 val_spec=0.974 (6s)
+epoch  9/12 [finetune] train_loss=0.0178 val_loss=0.0578 val_auc=0.9968 val_sens=0.994 val_spec=0.959 (6s)
+epoch 10/12 [finetune] train_loss=0.0114 val_loss=0.0602 val_auc=0.9968 val_sens=0.992 val_spec=0.959 (6s)
+epoch 11/12 [finetune] train_loss=0.0121 val_loss=0.0616 val_auc=0.9968 val_sens=0.992 val_spec=0.954 (6s)
+epoch 12/12 [finetune] train_loss=0.0127 val_loss=0.0549 val_auc=0.9969 val_sens=0.992 val_spec=0.964 (6s)
+early stopping: no val loss improvement for 5 epochs
+TEST (threshold 0.868 from val): acc=0.9327 auc=0.9787 sens=0.9923 spec=0.8333 f1=0.9485

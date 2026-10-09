@@ -1,0 +1,77 @@
+{
+  "model": "ensemble",
+  "members": [
+    "/content/drive/MyDrive/pneumonia_v3/runs/main/simple_cnn/seed44",
+    "/content/drive/MyDrive/pneumonia_v3/runs/main/resnet50/seed44",
+    "/content/drive/MyDrive/pneumonia_v3/runs/main/efficientnet_b0/seed44",
+    "/content/drive/MyDrive/pneumonia_v3/runs/main/densenet121/seed44",
+    "/content/drive/MyDrive/pneumonia_v3/runs/main/vit_b_16/seed44"
+  ],
+  "params": 121446689,
+  "train_minutes": 8.373189294338227,
+  "val_threshold": 0.8273795160052838,
+  "val": {
+    "threshold": 0.8273795160052838,
+    "accuracy": 0.982028241335045,
+    "sensitivity": 0.9761092150170648,
+    "specificity": 1.0,
+    "precision": 1.0,
+    "npv": 0.9323671497584541,
+    "f1": 0.9879101899827288,
+    "auc": 0.9990627597304992,
+    "tp": 572,
+    "tn": 193,
+    "fp": 0,
+    "fn": 14
+  },
+  "test_at_0.5": {
+    "threshold": 0.5,
+    "accuracy": 0.8878205128205128,
+    "sensitivity": 0.9974358974358974,
+    "specificity": 0.7051282051282052,
+    "precision": 0.8493449781659389,
+    "npv": 0.9939759036144579,
+    "f1": 0.9174528301886793,
+    "auc": 0.9865439403900943,
+    "tp": 389,
+    "tn": 165,
+    "fp": 69,
+    "fn": 1
+  },
+  "test": {
+    "threshold": 0.8273795160052838,
+    "accuracy": 0.9326923076923077,
+    "sensitivity": 0.9871794871794872,
+    "specificity": 0.8418803418803419,
+    "precision": 0.9123222748815166,
+    "npv": 0.9752475247524752,
+    "f1": 0.9482758620689655,
+    "auc": 0.9865439403900943,
+    "tp": 385,
+    "tn": 197,
+    "fp": 37,
+    "fn": 5
+  },
+  "test_ci95": {
+    "accuracy": [
+      0.911178042763158,
+      0.9525243646898337
+    ],
+    "sensitivity": [
+      0.9757396007867706,
+      0.9955288882404436
+    ],
+    "specificity": [
+      0.7925095089903181,
+      0.8859702610183996
+    ],
+    "f1": [
+      0.9289327208563872,
+      0.9645244852708267
+    ],
+    "auc": [
+      0.9776554791212303,
+      0.993169449213366
+    ]
+  }
+}

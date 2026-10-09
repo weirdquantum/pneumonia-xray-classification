@@ -1,0 +1,8 @@
+{
+  "description": "CNN without data augmentation",
+  "args": [
+    "--model",
+    "simple_cnn",
+    "--no-augment"
+  ]
+}

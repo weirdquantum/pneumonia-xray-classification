@@ -1,0 +1,106 @@
+{
+  "model": "simple_cnn_v1",
+  "config": {
+    "model": "simple_cnn_v1",
+    "data_dir": "/content/data",
+    "out": "/content/work/ablation/v1_like",
+    "epochs": 5,
+    "head_epochs": 0,
+    "lr": 0.001,
+    "head_lr": 0.001,
+    "batch_size": 10,
+    "patience": 8,
+    "select": "loss",
+    "weight_decay": 0.0001,
+    "loss": "bce",
+    "no_class_weight": true,
+    "no_augment": true,
+    "no_shuffle": true,
+    "no_amp": false,
+    "from_scratch": false,
+    "image_size": 100,
+    "num_workers": 4,
+    "device": "auto",
+    "seed": 42,
+    "split_seed": 42,
+    "max_steps": 0
+  },
+  "environment": {
+    "device": "NVIDIA A100-SXM4-40GB",
+    "torch": "2.11.0+cu130",
+    "python": "3.13.15",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.39",
+    "git_commit": "b624986",
+    "finished_at": "2026-10-09T18:48:41+00:00"
+  },
+  "params": 196897,
+  "best_epoch": 5,
+  "epochs_run": 5,
+  "train_minutes": 0.2563865860303243,
+  "val_loss": 0.5914055109024048,
+  "val_threshold": 1.0,
+  "val": {
+    "threshold": 1.0,
+    "accuracy": 0.2631578947368421,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "npv": 0.2631578947368421,
+    "f1": NaN,
+    "auc": 0.19749703205381874,
+    "tp": 0,
+    "tn": 190,
+    "fp": 0,
+    "fn": 532
+  },
+  "test_at_0.5": {
+    "threshold": 0.5,
+    "accuracy": 0.625,
+    "sensitivity": 1.0,
+    "specificity": 0.0,
+    "precision": 0.625,
+    "npv": NaN,
+    "f1": 0.7692307692307693,
+    "auc": 0.2252520271751041,
+    "tp": 390,
+    "tn": 0,
+    "fp": 234,
+    "fn": 0
+  },
+  "test": {
+    "threshold": 1.0,
+    "accuracy": 0.375,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "npv": 0.375,
+    "f1": NaN,
+    "auc": 0.2252520271751041,
+    "tp": 0,
+    "tn": 234,
+    "fp": 0,
+    "fn": 390
+  },
+  "test_ci95": {
+    "accuracy": [
+      0.32457365634227325,
+      0.42860314640954067
+    ],
+    "sensitivity": [
+      0.0,
+      0.0
+    ],
+    "specificity": [
+      1.0,
+      1.0
+    ],
+    "f1": [
+      NaN,
+      NaN
+    ],
+    "auc": [
+      0.18794914811329994,
+      0.26584594463298933
+    ]
+  }
+}

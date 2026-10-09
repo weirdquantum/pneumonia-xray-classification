@@ -1,0 +1,32 @@
+model=vit_b_16 device=cuda amp=True out=/content/work/main/vit_b_16/seed42
+train=4494 (normal 1151 / pneumonia 3343)  val=722  test=624
+Downloading: "https://download.pytorch.org/models/vit_b_16-c867db91.pth" to /root/.cache/torch/hub/checkpoints/vit_b_16-c867db91.pth
+
+  0%|          | 0.00/330M [00:00<?, ?B/s]
+  3%|▎         | 10.4M/330M [00:00<00:03, 109MB/s]
+ 10%|█         | 33.8M/330M [00:00<00:01, 189MB/s]
+ 17%|█▋        | 57.2M/330M [00:00<00:01, 215MB/s]
+ 24%|██▍       | 80.4M/330M [00:00<00:01, 225MB/s]
+ 31%|███▏      | 104M/330M [00:00<00:01, 232MB/s] 
+ 39%|███▊      | 127M/330M [00:00<00:00, 237MB/s]
+ 46%|████▌     | 150M/330M [00:00<00:00, 238MB/s]
+ 53%|█████▎    | 174M/330M [00:00<00:00, 241MB/s]
+ 60%|█████▉    | 197M/330M [00:00<00:00, 241MB/s]
+ 67%|██████▋   | 220M/330M [00:01<00:00, 241MB/s]
+ 74%|███████▎  | 243M/330M [00:01<00:00, 242MB/s]
+ 81%|████████  | 267M/330M [00:01<00:00, 243MB/s]
+ 88%|████████▊ | 290M/330M [00:01<00:00, 243MB/s]
+ 95%|█████████▍| 313M/330M [00:01<00:00, 244MB/s]
+100%|██████████| 330M/330M [00:01<00:00, 235MB/s]
+epoch  1/10 [head] train_loss=0.1442 val_loss=0.0994 val_auc=0.9822 val_sens=0.891 val_spec=0.979 (6s)
+epoch  2/10 [head] train_loss=0.0954 val_loss=0.0800 val_auc=0.9882 val_sens=0.923 val_spec=0.979 (4s)
+epoch  3/10 [finetune] train_loss=0.0773 val_loss=0.0756 val_auc=0.9971 val_sens=0.898 val_spec=1.000 (8s)
+epoch  4/10 [finetune] train_loss=0.0599 val_loss=0.0355 val_auc=0.9990 val_sens=0.957 val_spec=1.000 (8s)
+epoch  5/10 [finetune] train_loss=0.0405 val_loss=0.0309 val_auc=0.9984 val_sens=0.992 val_spec=0.968 (8s)
+epoch  6/10 [finetune] train_loss=0.0392 val_loss=0.0169 val_auc=0.9990 val_sens=0.989 val_spec=0.995 (8s)
+epoch  7/10 [finetune] train_loss=0.0295 val_loss=0.0253 val_auc=0.9983 val_sens=0.985 val_spec=0.995 (8s)
+epoch  8/10 [finetune] train_loss=0.0252 val_loss=0.0216 val_auc=0.9986 val_sens=0.987 val_spec=0.989 (8s)
+epoch  9/10 [finetune] train_loss=0.0168 val_loss=0.0199 val_auc=0.9986 val_sens=0.987 val_spec=0.995 (8s)
+epoch 10/10 [finetune] train_loss=0.0133 val_loss=0.0200 val_auc=0.9986 val_sens=0.987 val_spec=0.995 (8s)
+early stopping: no val loss improvement for 4 epochs
+TEST (threshold 0.617 from val): acc=0.9087 auc=0.9844 sens=0.9974 spec=0.7607 f1=0.9317
