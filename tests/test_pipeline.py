@@ -37,3 +37,36 @@ def test_train_writes_predictions_and_metrics(tmp_path):
         assert len(preds) == n
         assert np.allclose(preds["prob"], 1 / (1 + np.exp(-preds["logit"])), atol=1e-6)
     assert (out / "best.pt").exists() and (out / "history.csv").exists()
+
+
+def test_split_seed_redraws_val_but_never_moves_test(tmp_path):
+    from pneumonia.data import load_split
+
+    make_fake_data(tmp_path)
+    (_, val_a), (_, val_b) = (load_split(tmp_path, "val", False, split_seed=s) for s in (1, 2))
+    (_, test_a), (_, test_b) = (load_split(tmp_path, "test", False, split_seed=s) for s in (1, 2))
+    assert set(val_a.index) != set(val_b.index)
+    assert set(test_a.index) == set(test_b.index)
+    train_a = load_split(tmp_path, "train", False, split_seed=1)[1]
+    assert set(train_a["patient_id"]).isdisjoint(val_a["patient_id"])
+
+
+def test_head_stage_keeps_backbone_batchnorm_frozen(tmp_path):
+    import torch
+
+    from pneumonia.models import build_model
+    from pneumonia.train import train_one_epoch
+
+    spec = build_model("resnet50", pretrained=False)
+    for p in spec.model.parameters():
+        p.requires_grad = False
+    for p in spec.head.parameters():
+        p.requires_grad = True
+    before = spec.model.bn1.running_mean.clone()
+    loader = [(torch.randn(4, 3, 64, 64) * 5 + 3, torch.tensor([0.0, 1.0, 0.0, 1.0]))]
+    opt = torch.optim.AdamW(spec.head.parameters(), lr=1e-3)
+    scaler = torch.amp.GradScaler("cuda", enabled=False)
+    train_one_epoch(spec.model, spec.head, True, loader, torch.nn.BCEWithLogitsLoss(), opt, None, scaler, torch.device("cpu"), False)
+    assert torch.equal(spec.model.bn1.running_mean, before)
+    train_one_epoch(spec.model, spec.head, False, loader, torch.nn.BCEWithLogitsLoss(), opt, None, scaler, torch.device("cpu"), False)
+    assert not torch.equal(spec.model.bn1.running_mean, before)

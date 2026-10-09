@@ -8,6 +8,24 @@
 
 ![ROC curves](figures/roc_curves.png)
 
+## v3 实验（`v3` 分支，待运行）
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/weirdquantum/pneumonia-xray-classification/blob/v3/colab/run_all_experiments.ipynb)
+
+针对 v2 复查中发现的问题，`v3` 分支改进了训练和评估，下面的结果表仍是 v2 的数字：
+
+- 按验证集 loss 选择 checkpoint（v2 按已饱和的验证 AUC 选，基本是噪声）
+- 第一阶段真正冻结主干网络的 BatchNorm；CUDA 上使用混合精度
+- 3 个随机种子，每个种子重新按患者划分验证集，报告均值 ± 标准差
+- 消融实验：在 CNN 上逐项去掉改进，并复现 v1 配方，验证"提升来自哪里"
+- 概率校准（温度缩放 / Platt 缩放）、5 模型集成
+
+用 Colab 打开 [`colab/run_all_experiments.ipynb`](colab/run_all_experiments.ipynb)，选择 GPU 后"全部运行"即可（T4 约 3–4 小时，可断点续跑）。本地运行：
+
+```bash
+python scripts/experiments.py --runs-root runs_v3
+```
+
 ## 结果
 
 官方测试集 624 张（234 正常 / 390 肺炎），每个模型只在训练结束后评估一次。决策阈值在验证集上用 Youden 指数选取，括号内为按患者重采样的 bootstrap 95% 置信区间。
@@ -82,10 +100,14 @@ pip install -e ".[dev]"
 ```
 
 ```bash
-bash scripts/run_all.sh
+python scripts/prepare_data.py --raw . --out data
 ```
 
-`run_all.sh` 依次执行数据缓存、训练全部 5 个模型、生成 Grad-CAM 和汇总结果表。单独训练一个模型：
+```bash
+python scripts/experiments.py
+```
+
+`experiments.py` 依次运行全部主实验、消融实验、Grad-CAM、集成、校准和汇总报告，已完成的训练会自动跳过。先用 `--plan smoke` 几分钟跑通全流程可以检查环境。单独训练一个模型：
 
 ```bash
 python -m pneumonia.train --model resnet50
@@ -110,7 +132,10 @@ src/pneumonia/
   train.py      两阶段训练、早停、验证集选阈值、测试集评估
   metrics.py    评估指标、Youden 阈值、按患者 bootstrap 置信区间
   gradcam.py    Grad-CAM（含 ViT token 重排）与边框占比检查
-scripts/        prepare_data.py、run_all.sh、report.py
+  calibrate.py  温度缩放 / Platt 缩放、ECE、可靠性曲线
+  ensemble.py   校准后的多模型集成
+scripts/        prepare_data.py、experiments.py（全部实验，可续跑）、report.py
+colab/          run_all_experiments.ipynb（Colab 一键运行 v3）
 runs/<model>/   metrics.json、history.csv、test_predictions.csv、gradcam.json（权重文件未提交）
 results/        汇总结果表
 figures/        ROC 曲线、混淆矩阵、Grad-CAM 示例

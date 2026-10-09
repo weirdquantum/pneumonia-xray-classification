@@ -11,24 +11,43 @@ from torchvision import models as tvm
 
 
 class SimpleCNN(nn.Module):
-    """From-scratch baseline: the v1 4-block CNN with BatchNorm and global average pooling."""
+    """From-scratch baseline: 4 double-conv blocks with BatchNorm and global average pooling."""
 
-    def __init__(self, dropout: float = 0.3):
+    def __init__(self, dropout: float = 0.3, batchnorm: bool = True):
         super().__init__()
         blocks = []
         channels = [3, 32, 64, 128, 256]
+        norm = nn.BatchNorm2d if batchnorm else lambda c: nn.Identity()
         for c_in, c_out in zip(channels[:-1], channels[1:]):
             blocks += [
-                nn.Conv2d(c_in, c_out, 3, padding=1, bias=False),
-                nn.BatchNorm2d(c_out),
+                nn.Conv2d(c_in, c_out, 3, padding=1, bias=not batchnorm),
+                norm(c_out),
                 nn.ReLU(inplace=True),
-                nn.Conv2d(c_out, c_out, 3, padding=1, bias=False),
-                nn.BatchNorm2d(c_out),
+                nn.Conv2d(c_out, c_out, 3, padding=1, bias=not batchnorm),
+                norm(c_out),
                 nn.ReLU(inplace=True),
                 nn.MaxPool2d(2),
             ]
         self.features = nn.Sequential(*blocks)
         self.head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Dropout(dropout), nn.Linear(channels[-1], 1))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.head(self.features(x))
+
+
+class SimpleCNNv1(nn.Module):
+    """PyTorch replica of the v1 Keras CNN (legacy/cnn.ipynb): 4 x (conv-pool-dropout), flatten, Dense(128)."""
+
+    def __init__(self, image_size: int = 100):
+        super().__init__()
+        blocks, c_in = [], 3
+        for c_out in (32, 32, 64, 64):
+            blocks += [nn.Conv2d(c_in, c_out, 3), nn.ReLU(), nn.MaxPool2d(2), nn.Dropout(0.2)]
+            c_in = c_out
+        self.features = nn.Sequential(*blocks)
+        with torch.no_grad():
+            n_flat = self.features(torch.zeros(1, 3, image_size, image_size)).numel()
+        self.head = nn.Sequential(nn.Flatten(), nn.Linear(n_flat, 128), nn.ReLU(), nn.Dropout(0.1), nn.Linear(128, 1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.head(self.features(x))
@@ -50,10 +69,14 @@ class ModelSpec:
     pretrained: bool = True
 
 
-def build_model(name: str, pretrained: bool = True) -> ModelSpec:
-    if name == "simple_cnn":
-        m = SimpleCNN()
+def build_model(name: str, pretrained: bool = True, image_size: int = 224) -> ModelSpec:
+    if name in ("simple_cnn", "simple_cnn_nobn"):
+        m = SimpleCNN(batchnorm=name == "simple_cnn")
         return ModelSpec(m, m.head, m.features[-2], pretrained=False)  # last ReLU before the final pool
+
+    if name == "simple_cnn_v1":
+        m = SimpleCNNv1(image_size)
+        return ModelSpec(m, m.head, m.features[-3], pretrained=False)  # last ReLU
 
     if name == "resnet50":
         m = tvm.resnet50(weights=tvm.ResNet50_Weights.IMAGENET1K_V2 if pretrained else None)
@@ -79,3 +102,4 @@ def build_model(name: str, pretrained: bool = True) -> ModelSpec:
 
 
 MODEL_NAMES = ("simple_cnn", "resnet50", "densenet121", "efficientnet_b0", "vit_b_16")
+ABLATION_MODEL_NAMES = ("simple_cnn_nobn", "simple_cnn_v1")

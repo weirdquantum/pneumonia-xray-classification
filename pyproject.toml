@@ -8,7 +8,7 @@ version = "2.0.0"
 description = "Pneumonia vs. normal chest X-ray classification with patient-level evaluation"
 requires-python = ">=3.10"
 dependencies = [
-    "torch>=2.2",
+    "torch>=2.3",
     "torchvision>=0.17",
     "scikit-learn>=1.3",
     "scipy",

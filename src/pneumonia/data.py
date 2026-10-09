@@ -145,9 +145,15 @@ class XrayDataset(Dataset):
         return img, torch.tensor(self.labels[i])
 
 
-def load_split(data_dir: str | Path, split: str, augment: bool, image_size: int = 224) -> tuple[XrayDataset, pd.DataFrame]:
+def load_split(
+    data_dir: str | Path, split: str, augment: bool, image_size: int = 224, split_seed: int | None = None, val_frac: float = 0.15
+) -> tuple[XrayDataset, pd.DataFrame]:
+    """Dataset for one split. ``split_seed`` re-draws the patient-level train/val split (the test split never moves);
+    ``None`` keeps the split stored in manifest.csv, which ``prepare_data.py`` drew with seed 42."""
     data_dir = Path(data_dir)
     manifest = pd.read_csv(data_dir / "manifest.csv")
+    if split_seed is not None:
+        manifest = assign_val_split(manifest.assign(split=manifest["split"].replace("val", "train")), val_frac, split_seed)
     n_cached = np.load(data_dir / "images.npy", mmap_mode="r").shape[0]
     if n_cached != len(manifest):
         raise ValueError(f"images.npy has {n_cached} images but manifest.csv has {len(manifest)} rows; rerun scripts/prepare_data.py")

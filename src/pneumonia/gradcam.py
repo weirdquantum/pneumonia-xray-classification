@@ -85,12 +85,13 @@ def main(argv: list[str] | None = None) -> None:
     results = json.loads((args.run / "metrics.json").read_text())
     name, threshold = results["model"], results["val_threshold"]
     device = get_device(args.device)
-    spec = build_model(name, pretrained=False)
+    image_size = results["config"]["image_size"]
+    spec = build_model(name, pretrained=False, image_size=image_size)
     spec.model.load_state_dict(torch.load(args.run / "best.pt", map_location="cpu"))
     model = spec.model.to(device).eval()
     cam = GradCAM(model, spec.cam_layer, spec.cam_reshape)
 
-    test_ds, _ = load_split(args.data_dir, "test", augment=False, image_size=results["config"]["image_size"])
+    test_ds, _ = load_split(args.data_dir, "test", augment=False, image_size=image_size)
     preds = pd.read_csv(args.run / "test_predictions.csv")
 
     shares = []
