@@ -116,7 +116,9 @@ def build_transforms(image_size: int = 224, augment: bool = True) -> v2.Compose:
             v2.ColorJitter(brightness=0.2, contrast=0.2),
         ]
     else:
-        ops = [v2.CenterCrop(image_size)]
+        # Resize first so the centre crop keeps the same field of view (224/256) at any --image-size;
+        # a bare CenterCrop(112) on a 256 cache would only show the middle of the chest.
+        ops = [v2.Resize(round(image_size * 256 / 224), antialias=True), v2.CenterCrop(image_size)]
     # No horizontal flips: the heart sits on the left, so mirroring creates anatomically implausible images.
     return v2.Compose(ops + [v2.ToDtype(torch.float32, scale=True)])
 
@@ -146,6 +148,9 @@ class XrayDataset(Dataset):
 def load_split(data_dir: str | Path, split: str, augment: bool, image_size: int = 224) -> tuple[XrayDataset, pd.DataFrame]:
     data_dir = Path(data_dir)
     manifest = pd.read_csv(data_dir / "manifest.csv")
+    n_cached = np.load(data_dir / "images.npy", mmap_mode="r").shape[0]
+    if n_cached != len(manifest):
+        raise ValueError(f"images.npy has {n_cached} images but manifest.csv has {len(manifest)} rows; rerun scripts/prepare_data.py")
     rows = manifest[manifest["split"] == split]
     ds = XrayDataset(data_dir / "images.npy", rows.index.to_numpy(), rows["label"].to_numpy(), build_transforms(image_size, augment))
     return ds, rows

@@ -61,11 +61,12 @@ class GradCAM:
 
 
 def border_share(cams: torch.Tensor) -> torch.Tensor:
+    """Share of each heatmap's mass in the outer border; NaN for an all-zero heatmap."""
     h, w = cams.shape[-2:]
     bh, bw = int(h * BORDER), int(w * BORDER)
-    total = cams.flatten(1).sum(1) + 1e-8
+    total = cams.flatten(1).sum(1)
     centre = cams[:, bh : h - bh, bw : w - bw].flatten(1).sum(1)
-    return 1 - centre / total
+    return torch.where(total > 0, 1 - centre / total.clamp_min(1e-12), torch.nan)
 
 
 def to_gray(x: torch.Tensor) -> np.ndarray:
@@ -98,9 +99,14 @@ def main(argv: list[str] | None = None) -> None:
         shares.append(border_share(cams).cpu())
     shares = torch.cat(shares).numpy()
     uniform = 1 - (1 - 2 * BORDER) ** 2
-    summary = {"border_share_mean": float(shares.mean()), "border_share_uniform_baseline": uniform}
+    summary = {
+        "border_share_mean": float(np.nanmean(shares)),
+        "border_share_uniform_baseline": uniform,
+        "empty_heatmaps": int(np.isnan(shares).sum()),
+    }
     (args.run / "gradcam.json").write_text(json.dumps(summary, indent=2))
-    print(f"{name}: mean Grad-CAM border share {shares.mean():.3f} (uniform heatmap would be {uniform:.3f})")
+    print(f"{name}: mean Grad-CAM border share {summary['border_share_mean']:.3f} (uniform heatmap would be {uniform:.3f}; "
+          f"{summary['empty_heatmaps']} empty heatmaps excluded)")
 
     pred = preds["prob"] >= threshold
     label = preds["label"] == 1

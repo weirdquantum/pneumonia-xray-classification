@@ -23,3 +23,8 @@ def test_forward_and_gradcam_shapes(name):
 def test_border_share_of_uniform_map():
     share = border_share(torch.ones(1, 224, 224))
     assert share.item() == pytest.approx(1 - 0.75**2, abs=0.01)
+
+
+def test_border_share_is_nan_for_empty_heatmap():
+    share = border_share(torch.zeros(2, 224, 224))
+    assert torch.isnan(share).all()

@@ -40,3 +40,27 @@ def test_val_split_keeps_patients_together_and_stratifies():
     val_frac = (df.split == "val").sum() / (df.split != "test").sum()
     assert 0.12 < val_frac < 0.28
     assert abs(df.loc[df.split == "val", "label"].mean() - df.loc[df.split == "train", "label"].mean()) < 0.1
+
+
+def test_eval_transform_keeps_field_of_view_at_any_size():
+    import torch
+
+    from pneumonia.data import build_transforms
+
+    img = torch.zeros(1, 256, 256, dtype=torch.uint8)
+    img[:, 20:30, 20:30] = 255  # marker near the corner, inside the 224/256 field of view
+    for size in (224, 112):
+        out = build_transforms(size, augment=False)(img)
+        assert out.shape == (1, size, size)
+        assert out.max() > 0.5, f"marker cropped away at image_size={size}"
+
+
+def test_load_split_rejects_cache_manifest_mismatch(tmp_path):
+    import numpy as np
+
+    from pneumonia.data import load_split
+
+    pd.DataFrame({"split": ["train", "test"], "label": [0, 1], "patient_id": ["a", "b"]}).to_csv(tmp_path / "manifest.csv", index=False)
+    np.save(tmp_path / "images.npy", np.zeros((3, 8, 8), dtype=np.uint8))
+    with pytest.raises(ValueError, match="rerun scripts/prepare_data.py"):
+        load_split(tmp_path, "train", augment=False)

@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from scipy.special import expit as sigmoid
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -93,14 +94,16 @@ def make_loader(ds, batch_size: int, shuffle: bool, num_workers: int, device: to
 
 @torch.no_grad()
 def predict(model: nn.Module, loader: DataLoader, device: torch.device, max_steps: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """Return ``(logits, labels)``."""
     model.eval()
-    probs, labels = [], []
+    logits, labels = [], []
     for step, (x, y) in enumerate(loader):
         if max_steps and step >= max_steps:
             break
-        probs.append(torch.sigmoid(model(x.to(device)).squeeze(1)).cpu())
+        logits.append(model(x.to(device)).squeeze(1).float().cpu())
         labels.append(y)
-    return torch.cat(probs).numpy(), torch.cat(labels).numpy()
+    return torch.cat(logits).numpy(), torch.cat(labels).numpy()
+
 
 
 def train_one_epoch(model, loader, criterion, optimizer, scheduler, device, max_steps: int = 0) -> float:
@@ -170,7 +173,8 @@ def main(argv: list[str] | None = None) -> None:
 
         t0 = time.time()
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device, args.max_steps)
-        val_prob, val_y = predict(model, val_loader, device, args.max_steps)
+        val_logit, val_y = predict(model, val_loader, device, args.max_steps)
+        val_prob = sigmoid(val_logit)
         val_loss = criterion(torch.logit(torch.tensor(val_prob).clamp(1e-6, 1 - 1e-6)).to(device), torch.tensor(val_y).to(device)).item()
         vm = binary_metrics(val_y, val_prob)
         history.append(dict(epoch=epoch + 1, stage=stage, train_loss=train_loss, val_loss=val_loss, val_auc=vm["auc"],
@@ -192,9 +196,10 @@ def main(argv: list[str] | None = None) -> None:
 
     # Final evaluation: best checkpoint, threshold picked on validation, single pass over test.
     model.load_state_dict(torch.load(args.out / "best.pt", map_location=device))
-    val_prob, val_y = predict(model, val_loader, device, args.max_steps)
-    test_prob, test_y = predict(model, test_loader, device, args.max_steps)
-    test_rows = test_rows.iloc[: len(test_prob)]
+    val_logit, val_y = predict(model, val_loader, device, args.max_steps)
+    test_logit, test_y = predict(model, test_loader, device, args.max_steps)
+    val_prob, test_prob = sigmoid(val_logit), sigmoid(test_logit)
+    val_rows, test_rows = val_rows.iloc[: len(val_prob)], test_rows.iloc[: len(test_prob)]
     threshold = youden_threshold(val_y, val_prob)
 
     results = {
@@ -210,7 +215,9 @@ def main(argv: list[str] | None = None) -> None:
         "test_ci95": bootstrap_ci(test_y, test_prob, test_rows["patient_id"].to_numpy(), threshold),
     }
     (args.out / "metrics.json").write_text(json.dumps(results, indent=2))
-    test_rows.assign(prob=test_prob).to_csv(args.out / "test_predictions.csv", index=False)
+    # Raw logits are kept so runs can be calibrated or ensembled later without re-running inference.
+    val_rows.assign(logit=val_logit, prob=val_prob).to_csv(args.out / "val_predictions.csv", index=False)
+    test_rows.assign(logit=test_logit, prob=test_prob).to_csv(args.out / "test_predictions.csv", index=False)
 
     t = results["test"]
     print(f"TEST (threshold {threshold:.3f} from val): acc={t['accuracy']:.4f} auc={t['auc']:.4f} "
